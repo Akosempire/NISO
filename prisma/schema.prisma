@@ -1,0 +1,503 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ====================================================
+// CORE ACCESS CONTROL
+// ====================================================
+
+model User {
+  id              String        @id @default(cuid())
+  email           String        @unique
+  name            String
+  role            UserRole
+  regionId        String?       @map("region_id")
+  stationId       String?       @map("station_id")
+  department      String?
+  phone           String?
+  isActive        Boolean       @default(true) @map("is_active")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  
+  region          Region?       @relation(fields: [regionId], references: [id])
+  station         Station?      @relation(fields: [stationId], references: [id])
+  sentMessages    Message[]     @relation("Sender")
+  receivedMessages Message[]    @relation("Receiver")
+  auditLogs       AuditLog[]
+  shares          DataShare[]
+  knowledgeArticles KnowledgeArticle[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  HEADQUARTERS_ADMIN
+  ICT_ADMIN
+  REGIONAL_ADMIN
+  STATION_ADMIN
+  SUPERVISOR
+  OPERATOR
+  VIEWER
+  KNOWLEDGE_ADMIN
+}
+
+model Region {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  stations  Station[]
+  users     User[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  
+  @@map("regions")
+}
+
+model Station {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  name        String
+  regionId    String    @map("region_id")
+  region      Region    @relation(fields: [regionId], references: [id])
+  equipment   Equipment[]
+  users       User[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  @@map("stations")
+}
+
+// ====================================================
+// TEMPLATE ENGINE
+// ====================================================
+
+model Template {
+  id          String            @id @default(cuid())
+  name        String
+  type        TemplateType
+  description String?
+  category    String
+  version     Int               @default(1)
+  isActive    Boolean           @default(true) @map("is_active")
+  fields      TemplateField[]
+  formulas    Formula[]
+  equipment   Equipment[]
+  inspections Inspection[]
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  
+  @@map("templates")
+}
+
+enum TemplateType {
+  CIRCUIT_330KV
+  CIRCUIT_132KV
+  TRANSFORMER
+  REACTOR
+  FEEDER_33KV
+  INSPECTION
+  SLA
+  INTERRUPTION
+}
+
+model TemplateField {
+  id          String          @id @default(cuid())
+  templateId  String          @map("template_id")
+  template    Template        @relation(fields: [templateId], references: [id])
+  name        String
+  label       String
+  type        FieldType
+  unit        String?
+  isRequired  Boolean         @default(false) @map("is_required")
+  isProtected Boolean         @default(false) @map("is_protected")
+  order       Int
+  defaultValue String?         @map("default_value")
+  options     String?          // JSON array for select fields
+  validation  String?          // JSON object for validation rules
+  createdAt   DateTime        @default(now()) @map("created_at")
+  
+  @@map("template_fields")
+}
+
+enum FieldType {
+  NUMBER
+  TEXT
+  CODE
+  SELECT
+  DATE
+  TIME
+  DATETIME
+  BOOLEAN
+  TEXTAREA
+}
+
+// ====================================================
+// EQUIPMENT REGISTRY
+// ====================================================
+
+model Equipment {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  type        EquipmentType
+  stationId   String      @map("station_id")
+  station     Station     @relation(fields: [stationId], references: [id])
+  templateId  String      @map("template_id")
+  template    Template    @relation(fields: [templateId], references: [id])
+  voltage     Int?
+  status      EquipmentStatus @default(ACTIVE)
+  metadata    Json?       // Extensible equipment properties
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  
+  readings    Reading[]
+  interruptions InterruptionRecord[]
+  slaEntries  SLAEntry[]
+  inspections Inspection[]
+  
+  @@map("equipment")
+}
+
+enum EquipmentType {
+  CIRCUIT_330KV
+  CIRCUIT_132KV
+  TRANSFORMER
+  REACTOR
+  FEEDER_33KV
+  BUS
+  CAPACITOR
+}
+
+enum EquipmentStatus {
+  ACTIVE
+  MAINTENANCE
+  DECOMMISSIONED
+  PLANNED
+}
+
+// ====================================================
+// OPERATIONAL READINGS
+// ====================================================
+
+model Reading {
+  id           String        @id @default(cuid())
+  equipmentId  String        @map("equipment_id")
+  equipment    Equipment     @relation(fields: [equipmentId], references: [id])
+  readingHour  DateTime      @map("reading_hour")
+  values       Json          // Store template field values
+  rawInput     Json          @map("raw_input") // Store original raw input
+  source       ReadingSource @default(MANUAL)
+  sourceUser   String?       @map("source_user")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  
+  @@unique([equipmentId, readingHour])
+  @@index([equipmentId, readingHour])
+  @@map("readings")
+}
+
+enum ReadingSource {
+  MANUAL
+  SCADA
+  API
+  BULK_IMPORT
+}
+
+// ====================================================
+// MONTH LIFECYCLE
+// ====================================================
+
+model MonthLifecycle {
+  id          String        @id @default(cuid())
+  year        Int
+  month       Int
+  status      MonthStatus   @default(OPEN)
+  sealedAt    DateTime?     @map("sealed_at")
+  sealedBy    String?       @map("sealed_by")
+  notes       String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  
+  @@unique([year, month])
+  @@map("month_lifecycles")
+}
+
+enum MonthStatus {
+  OPEN
+  REVIEW
+  SEALED
+}
+
+// ====================================================
+// FORMULA ENGINE
+// ====================================================
+
+model Formula {
+  id          String    @id @default(cuid())
+  name        String
+  expression  String    // Excel-like formula
+  templateId  String?   @map("template_id")
+  template    Template? @relation(fields: [templateId], references: [id])
+  targetField String    @map("target_field")
+  version     Int       @default(1)
+  isValid     Boolean   @default(true) @map("is_valid")
+  errorMsg    String?   @map("error_msg")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  auditLogs   AuditLog[]
+  
+  @@map("formulas")
+}
+
+// ====================================================
+// INTERRUPTION MANAGEMENT
+// ====================================================
+
+model Interruption {
+  id              String             @id @default(cuid())
+  sessionId       String             @map("session_id")
+  title           String
+  description     String?
+  reportedAt      DateTime           @default(now()) @map("reported_at")
+  reportedBy      String             @map("reported_by")
+  status          InterruptionStatus @default(ACTIVE)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  
+  records         InterruptionRecord[]
+  
+  @@index([sessionId])
+  @@map("interruptions")
+}
+
+model InterruptionRecord {
+  id                String         @id @default(cuid())
+  interruptionId    String         @map("interruption_id")
+  interruption      Interruption   @relation(fields: [interruptionId], references: [id])
+  equipmentId       String         @map("equipment_id")
+  equipment         Equipment      @relation(fields: [equipmentId], references: [id])
+  relayFault        String?        @map("relay_fault")
+  tripTime          DateTime       @map("trip_time")
+  restorationTime   DateTime?      @map("restoration_time")
+  status            InterruptionStatus @default(ACTIVE)
+  totalTimeOut      BigInt?        @map("total_time_out") // in seconds
+  notes             String?
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  
+  @@map("interruption_records")
+}
+
+enum InterruptionStatus {
+  ACTIVE
+  RESTORED
+  PENDING_REVIEW
+  ESCALATED
+}
+
+// ====================================================
+// SLA / FEEDER MODULE
+// ====================================================
+
+model SLAEntry {
+  id              String      @id @default(cuid())
+  equipmentId     String      @map("equipment_id")
+  equipment       Equipment   @relation(fields: [equipmentId], references: [id])
+  readingDate     DateTime    @map("reading_date")
+  meterReading    Float?      @map("meter_reading")
+  mwValue         Float?      @map("mw_value")
+  forecast        Float?
+  actual          Float?      // calculated
+  difference      Float?      // calculated
+  remarks         String?
+  createdBy       String      @map("created_by")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  
+  @@unique([equipmentId, readingDate])
+  @@index([equipmentId, readingDate])
+  @@map("sla_entries")
+}
+
+// ====================================================
+// INSPECTION MODULE
+// ====================================================
+
+model Inspection {
+  id          String            @id @default(cuid())
+  sessionId   String            @map("session_id")
+  equipmentId String            @map("equipment_id")
+  equipment   Equipment         @relation(fields: [equipmentId], references: [id])
+  templateId  String            @map("template_id")
+  template    Template          @relation(fields: [templateId], references: [id])
+  inspector   String
+  inspectionDate DateTime        @map("inspection_date")
+  status      InspectionStatus  @default(PENDING)
+  findings    Json?             // Store template field values
+  remarks     String?
+  attachments Json?             // Store attachment references
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  
+  @@index([sessionId])
+  @@map("inspections")
+}
+
+enum InspectionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  AWAITING_REVIEW
+  REVIEWED
+}
+
+// ====================================================
+// KNOWLEDGE MODULE
+// ====================================================
+
+model KnowledgeArticle {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  category    String
+  tags        String[]  // PostgreSQL array
+  version     Int       @default(1)
+  status      ArticleStatus @default(DRAFT)
+  authorId    String    @map("author_id")
+  author      User      @relation(fields: [authorId], references: [id])
+  fileUrl     String?   @map("file_url")
+  fileType    String?   @map("file_type")
+  viewCount   Int       @default(0) @map("view_count")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  @@map("knowledge_articles")
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  UNDER_REVIEW
+}
+
+// ====================================================
+// MESSAGING
+// ====================================================
+
+model Message {
+  id          String      @id @default(cuid())
+  subject     String
+  content     String
+  senderId    String      @map("sender_id")
+  sender      User        @relation("Sender", fields: [senderId], references: [id])
+  receiverId  String      @map("receiver_id")
+  receiver    User        @relation("Receiver", fields: [receiverId], references: [id])
+  isRead      Boolean     @default(false) @map("is_read")
+  isBroadcast Boolean     @default(false) @map("is_broadcast")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  
+  @@index([senderId, receiverId])
+  @@map("messages")
+}
+
+// ====================================================
+// DATA SHARING
+// ====================================================
+
+model DataShare {
+  id          String        @id @default(cuid())
+  sharedBy    String        @map("shared_by")
+  sharedByUser User          @relation(fields: [sharedBy], references: [id])
+  sharedWith  String        @map("shared_with") // email or group ID
+  shareType   ShareType
+  accessToken String        @unique @map("access_token")
+  permissions Json          // {canExport: true, canFilter: true}
+  expiresAt   DateTime?     @map("expires_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  
+  shareDetails DataShareDetail[]
+  
+  @@map("data_shares")
+}
+
+model DataShareDetail {
+  id          String    @id @default(cuid())
+  shareId     String    @map("share_id")
+  share       DataShare @relation(fields: [shareId], references: [id])
+  resourceType ResourceType
+  resourceId  String    @map("resource_id")
+  filters     Json?     // JSON for date ranges, equipment filters
+  
+  @@map("data_share_details")
+}
+
+enum ShareType {
+  TEMPORARY_LINK
+  EMAIL
+  GROUP
+}
+
+enum ResourceType {
+  STATION_DATA
+  EQUIPMENT_READINGS
+  SLA_DATA
+  INTERRUPTIONS
+  INSPECTIONS
+  REPORTS
+}
+
+// ====================================================
+// AUDIT LOGGING
+// ====================================================
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  action      String
+  entityType  String    @map("entity_type")
+  entityId    String    @map("entity_id")
+  oldValues   Json?     @map("old_values")
+  newValues   Json?     @map("new_values")
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  formulaId   String?   @map("formula_id")
+  formula     Formula?  @relation(fields: [formulaId], references: [id])
+  
+  @@index([userId, entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ====================================================
+// OFFLINE SYNC QUEUE
+// ====================================================
+
+model OfflineQueue {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  operation   String    // CREATE, UPDATE, DELETE
+  entityType  String    @map("entity_type")
+  entityId    String?   @map("entity_id")
+  data        Json
+  status      SyncStatus @default(PENDING)
+  errorMsg    String?   @map("error_msg")
+  retryCount  Int       @default(0) @map("retry_count")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  syncedAt    DateTime? @map("synced_at")
+  
+  @@index([userId, status])
+  @@map("offline_queue")
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  CONFLICT
+}
