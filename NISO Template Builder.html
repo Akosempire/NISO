@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NISO Template Builder</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+    
+    .app { display: flex; min-height: 100vh; }
+    
+    /* SIDEBAR */
+    .sidebar { width: 280px; background: #f9f9f9; border-right: 1px solid #e0e0e0; padding: 20px 0; overflow-y: auto; }
+    .sidebar-logo { padding: 0 16px 20px; font-size: 16px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e0e0e0; margin-bottom: 16px; }
+    .nav-section { padding: 0 8px; margin-bottom: 12px; }
+    .nav-section-title { padding: 0 8px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; }
+    .nav-item { padding: 8px 12px; border-radius: 3px; font-size: 13px; cursor: pointer; color: #666; margin-bottom: 2px; transition: all 0.2s; }
+    .nav-item:hover { background: #f0f0f0; }
+    .nav-item.active { background: #e3f2fd; color: #2563eb; font-weight: 600; }
+    
+    /* HEADER */
+    .header { padding: 20px 24px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+    .header-title { font-size: 20px; font-weight: 700; }
+    .header-actions { display: flex; gap: 8px; }
+    
+    /* MAIN */
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+    
+    /* TEMPLATES LIST */
+    .templates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .template-card { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+    .template-card:hover { border-color: #2563eb; box-shadow: 0 4px 12px rgba(37,99,235,0.1); }
+    .template-name { font-weight: 600; margin-bottom: 8px; }
+    .template-meta { font-size: 12px; color: #999; }
+    .template-actions { display: flex; gap: 6px; margin-top: 12px; }
+    
+    /* BUILDER */
+    .builder-container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .builder-panel { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; }
+    .panel-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; }
+    
+    /* FIELD EDITOR */
+    .field-list { display: flex; flex-direction: column; gap: 12px; }
+    .field-item { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 3px; padding: 12px; }
+    .field-item.selected { background: #e3f2fd; border-color: #2563eb; }
+    .field-label { font-weight: 600; margin-bottom: 4px; }
+    .field-type { font-size: 11px; color: #999; }
+    
+    /* FORMS */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #333; }
+    .form-input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; }
+    .form-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .form-textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; min-height: 80px; resize: vertical; }
+    .form-checkbox { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .form-checkbox input { cursor: pointer; }
+    .form-checkbox label { cursor: pointer; font-size: 13px; }
+    .form-select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; }
+    
+    /* BUTTONS */
+    .btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-primary:hover { background: #1e53d6; }
+    .btn-sm { padding: 6px 10px; font-size: 11px; }
+    .btn-danger { background: #d32f2f; color: white; border-color: #d32f2f; }
+    .btn-danger:hover { background: #b71c1c; }
+    
+    /* PREVIEW */
+    .preview-form { background: #f9f9f9; padding: 16px; border-radius: 3px; }
+    .preview-field { margin-bottom: 16px; }
+    .preview-label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px; }
+    .preview-required { color: #d32f2f; margin-left: 4px; }
+    .preview-input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; }
+    .preview-hint { font-size: 11px; color: #999; margin-top: 4px; }
+    
+    /* MODAL */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 999; display: flex; align-items: center; justify-content: center; }
+    .modal { background: white; border-radius: 4px; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .modal-header { padding: 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+    .modal-content { padding: 20px; }
+    
+    /* VERSION HISTORY */
+    .version-item { padding: 12px; border: 1px solid #e0e0e0; border-radius: 3px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+    .version-item:hover { background: #f9f9f9; border-color: #2563eb; }
+    .version-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .version-number { font-weight: 600; }
+    .version-date { font-size: 11px; color: #999; }
+    .version-status { font-size: 11px; padding: 2px 6px; border-radius: 2px; background: #e3f2fd; color: #1e40af; }
+    
+    /* BADGES */
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 2px; font-size: 10px; font-weight: 600; }
+    .badge-green { background: #e6f9f0; color: #047857; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    
+    /* SECTIONS */
+    .section { margin-bottom: 20px; }
+    .section-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #333; }
+    
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+    const FIELD_TYPES = [
+      { id: 'text', name: 'Text Input', icon: 'abc' },
+      { id: 'number', name: 'Number', icon: '123' },
+      { id: 'dropdown', name: 'Dropdown', icon: '▼' },
+      { id: 'date', name: 'Date/Time', icon: '📅' },
+      { id: 'checkbox', name: 'Checkbox', icon: '☑' },
+      { id: 'formula', name: 'Formula Field', icon: '∑' }
+    ];
+
+    /* ===== SIDEBAR ===== */
+    function Sidebar({ currentPage, onPageChange }) {
+      return (
+        <div className="sidebar">
+          <div className="sidebar-logo">NISO</div>
+          
+          <div className="nav-section">
+            <div className="nav-section-title">Templates</div>
+            <div className={`nav-item ${currentPage === 'list' ? 'active' : ''}`} onClick={() => onPageChange('list')}>All Templates</div>
+            <div className={`nav-item ${currentPage === 'create' ? 'active' : ''}`} onClick={() => onPageChange('create')}>Create New</div>
+            <div className={`nav-item ${currentPage === 'drafts' ? 'active' : ''}`} onClick={() => onPageChange('drafts')}>Drafts</div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-title">Management</div>
+            <div className="nav-item" onClick={() => onPageChange('list')}>Back to System</div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== HEADER ===== */
+    function Header({ title, onCreateClick, currentPage }) {
+      return (
+        <div className="header">
+          <div className="header-title">{title}</div>
+          <div className="header-actions">
+            {currentPage === 'list' && (
+              <button className="btn btn-primary" onClick={onCreateClick}>+ New Template</button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== TEMPLATES LIST ===== */
+    function TemplatesList({ templates, onEdit, onClone, onDelete }) {
+      return (
+        <div className="content">
+          {templates.length === 0 ? (
+            <div className="empty-state">
+              <p>No templates yet. Create one to get started!</p>
+            </div>
+          ) : (
+            <div className="templates-grid">
+              {templates.map(t => (
+                <div key={t.id} className="template-card">
+                  <div className="template-name">{t.name}</div>
+                  <div className="template-meta">
+                    <div>Equipment: {t.equipment}</div>
+                    <div>Fields: {t.fields.length}</div>
+                    <div>v{t.version} • {t.status}</div>
+                  </div>
+                  <div className="template-actions">
+                    <button className="btn btn-sm" onClick={() => onEdit(t.id)}>Edit</button>
+                    <button className="btn btn-sm" onClick={() => onClone(t.id)}>Clone</button>
+                    <button className="btn btn-sm btn-danger" onClick={() => onDelete(t.id)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== TEMPLATE BUILDER ===== */
+    function TemplateBuilder({ initialTemplate, onSave, onCancel, isNew }) {
+      const [template, setTemplate] = useState(initialTemplate || {
+        id: `template-${Date.now()}`,
+        name: '',
+        equipment: '',
+        description: '',
+        fields: [],
+        version: 1,
+        status: 'DRAFT',
+        createdAt: new Date().toISOString(),
+        history: []
+      });
+
+      const [selectedFieldIdx, setSelectedFieldIdx] = useState(null);
+      const [showFieldEditor, setShowFieldEditor] = useState(false);
+      const [showVersionHistory, setShowVersionHistory] = useState(false);
+
+      const addField = () => {
+        setTemplate({
+          ...template,
+          fields: [...template.fields, {
+            id: `field-${Date.now()}`,
+            name: '',
+            type: 'text',
+            required: false,
+            validation: {},
+            order: template.fields.length
+          }]
+        });
+        setSelectedFieldIdx(template.fields.length);
+        setShowFieldEditor(true);
+      };
+
+      const updateField = (idx, updates) => {
+        const newFields = [...template.fields];
+        newFields[idx] = { ...newFields[idx], ...updates };
+        setTemplate({ ...template, fields: newFields });
+      };
+
+      const removeField = (idx) => {
+        setTemplate({
+          ...template,
+          fields: template.fields.filter((_, i) => i !== idx)
+        });
+      };
+
+      const saveTemplate = (publish = false) => {
+        const updated = {
+          ...template,
+          status: publish ? 'PUBLISHED' : 'DRAFT',
+          updatedAt: new Date().toISOString(),
+          history: [
+            ...(template.history || []),
+            {
+              version: template.version,
+              status: publish ? 'PUBLISHED' : 'SAVED AS DRAFT',
+              changedAt: new Date().toISOString(),
+              changesSummary: `${template.fields.length} fields`
+            }
+          ]
+        };
+        onSave(updated);
+      };
+
+      const selectedField = selectedFieldIdx !== null ? template.fields[selectedFieldIdx] : null;
+
+      return (
+        <div className="content">
+          <div style={{ background: 'white', border: '1px solid #e0e0e0', borderRadius: '4px', padding: '20px', marginBottom: '24px' }}>
+            <div className="form-group">
+              <label className="form-label">Template Name</label>
+              <input className="form-input" type="text" value={template.name} onChange={(e) => setTemplate({ ...template, name: e.target.value })} placeholder="e.g. 2SHR TR1 Hourly Reading" required />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-group">
+                <label className="form-label">Equipment Name</label>
+                <input className="form-input" type="text" value={template.equipment} onChange={(e) => setTemplate({ ...template, equipment: e.target.value })} placeholder="e.g. 2SHR TR1" required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Scope</label>
+                <select className="form-select">
+                  <option value="station">This Station Only</option>
+                  <option value="region">All Stations in Region</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Description</label>
+              <textarea className="form-textarea" value={template.description} onChange={(e) => setTemplate({ ...template, description: e.target.value })} placeholder="What is this template for?" />
+            </div>
+          </div>
+
+          <div className="builder-container">
+            {/* LEFT: FIELD EDITOR */}
+            <div className="builder-panel">
+              <div className="panel-title">
+                Fields ({template.fields.length})
+              </div>
+              <div className="field-list">
+                {template.fields.map((field, idx) => (
+                  <div
+                    key={field.id}
+                    className={`field-item ${selectedFieldIdx === idx ? 'selected' : ''}`}
+                    onClick={() => { setSelectedFieldIdx(idx); setShowFieldEditor(true); }}
+                  >
+                    <div className="field-label">
+                      {field.name || `Field ${idx + 1}`}
+                      {field.required && <span style={{ color: '#d32f2f' }}>*</span>}
+                    </div>
+                    <div className="field-type">{FIELD_TYPES.find(ft => ft.id === field.type)?.name}</div>
+                  </div>
+                ))}
+              </div>
+              <button className="btn btn-primary" style={{ width: '100%', marginTop: '12px' }} onClick={addField}>+ Add Field</button>
+            </div>
+
+            {/* RIGHT: FIELD CONFIGURATION & PREVIEW */}
+            <div className="builder-panel">
+              {selectedField && showFieldEditor ? (
+                <>
+                  <div className="panel-title">Configure Field</div>
+                  <div className="form-group">
+                    <label className="form-label">Field Name</label>
+                    <input className="form-input" type="text" value={selectedField.name} onChange={(e) => updateField(selectedFieldIdx, { name: e.target.value })} placeholder="e.g. Amperage (AMP)" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Field Type</label>
+                    <select className="form-select" value={selectedField.type} onChange={(e) => updateField(selectedFieldIdx, { type: e.target.value })}>
+                      {FIELD_TYPES.map(ft => <option key={ft.id} value={ft.id}>{ft.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-checkbox">
+                    <input type="checkbox" id={`req-${selectedFieldIdx}`} checked={selectedField.required} onChange={(e) => updateField(selectedFieldIdx, { required: e.target.checked })} />
+                    <label htmlFor={`req-${selectedFieldIdx}`}>Required field</label>
+                  </div>
+
+                  {selectedField.type === 'number' && (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <div className="form-group">
+                          <label className="form-label">Min Value</label>
+                          <input className="form-input" type="number" value={selectedField.validation?.min || ''} onChange={(e) => updateField(selectedFieldIdx, { validation: { ...selectedField.validation, min: e.target.value } })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Max Value</label>
+                          <input className="form-input" type="number" value={selectedField.validation?.max || ''} onChange={(e) => updateField(selectedFieldIdx, { validation: { ...selectedField.validation, max: e.target.value } })} />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Unit (optional)</label>
+                        <input className="form-input" type="text" value={selectedField.unit || ''} onChange={(e) => updateField(selectedFieldIdx, { unit: e.target.value })} placeholder="e.g. A, MW, KV" />
+                      </div>
+                    </>
+                  )}
+
+                  {selectedField.type === 'text' && (
+                    <div className="form-group">
+                      <label className="form-label">Validation Pattern (Regex)</label>
+                      <input className="form-input" type="text" value={selectedField.validation?.pattern || ''} onChange={(e) => updateField(selectedFieldIdx, { validation: { ...selectedField.validation, pattern: e.target.value } })} placeholder="e.g. ^[A-Z]+$" />
+                    </div>
+                  )}
+
+                  {selectedField.type === 'dropdown' && (
+                    <div className="form-group">
+                      <label className="form-label">Options (one per line)</label>
+                      <textarea className="form-textarea" value={selectedField.validation?.options?.join('\n') || ''} onChange={(e) => updateField(selectedFieldIdx, { validation: { ...selectedField.validation, options: e.target.value.split('\n').filter(v => v) } })} placeholder="Option 1&#10;Option 2&#10;Option 3" />
+                    </div>
+                  )}
+
+                  {selectedField.type === 'formula' && (
+                    <div className="form-group">
+                      <label className="form-label">Formula Expression</label>
+                      <input className="form-input" type="text" value={selectedField.validation?.expression || ''} onChange={(e) => updateField(selectedFieldIdx, { validation: { ...selectedField.validation, expression: e.target.value } })} placeholder="e.g. ABS(ACTUAL - FORECAST)" />
+                    </div>
+                  )}
+
+                  <button className="btn btn-danger" style={{ width: '100%', marginTop: '12px' }} onClick={() => { removeField(selectedFieldIdx); setShowFieldEditor(false); }}>Delete Field</button>
+                </>
+              ) : (
+                <>
+                  <div className="panel-title">Live Preview</div>
+                  <div className="preview-form">
+                    {template.fields.length === 0 ? (
+                      <div style={{ color: '#999', textAlign: 'center', padding: '20px' }}>No fields yet. Add one to preview.</div>
+                    ) : (
+                      template.fields.map((field, idx) => (
+                        <div key={field.id} className="preview-field">
+                          <label className="preview-label">
+                            {field.name || `Field ${idx + 1}`}
+                            {field.required && <span className="preview-required">*</span>}
+                          </label>
+                          {field.type === 'text' && <input className="preview-input" type="text" placeholder="Enter text..." disabled />}
+                          {field.type === 'number' && <input className="preview-input" type="number" placeholder="Enter number..." disabled />}
+                          {field.type === 'date' && <input className="preview-input" type="date" disabled />}
+                          {field.type === 'checkbox' && <input type="checkbox" disabled />}
+                          {field.type === 'dropdown' && (
+                            <select className="preview-input" disabled>
+                              <option>Select...</option>
+                              {field.validation?.options?.map(opt => <option key={opt}>{opt}</option>)}
+                            </select>
+                          )}
+                          {field.type === 'formula' && (
+                            <input className="preview-input" type="text" value={field.validation?.expression || ''} disabled style={{ background: '#f0f0f0', color: '#999' }} />
+                          )}
+                          {field.unit && <div className="preview-hint">{field.unit}</div>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button className="btn" onClick={onCancel}>Cancel</button>
+            <button className="btn btn-primary" onClick={() => saveTemplate(false)}>Save as Draft</button>
+            <button className="btn btn-primary" onClick={() => saveTemplate(true)} style={{ background: '#047857', borderColor: '#047857' }}>Publish Template</button>
+            <button className="btn" onClick={() => setShowVersionHistory(true)}>History</button>
+          </div>
+
+          {showVersionHistory && (
+            <div className="modal-overlay" onClick={() => setShowVersionHistory(false)}>
+              <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="modal-title">Version History</div>
+                  <button className="modal-close" onClick={() => setShowVersionHistory(false)}>×</button>
+                </div>
+                <div className="modal-content">
+                  {template.history && template.history.length > 0 ? (
+                    template.history.map((v, i) => (
+                      <div key={i} className="version-item">
+                        <div className="version-header">
+                          <div>
+                            <div className="version-number">Version {v.version}</div>
+                            <div className="version-date">{new Date(v.changedAt).toLocaleString()}</div>
+                          </div>
+                          <span className="version-status">{v.status}</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>{v.changesSummary}</div>
+                        <button className="btn btn-sm" style={{ marginTop: '8px' }}>Rollback</button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="empty-state">No version history yet</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== MAIN APP ===== */
+    function App() {
+      const [currentPage, setCurrentPage] = useState('list');
+      const [templates, setTemplates] = useState([
+        {
+          id: 't1',
+          name: '2SHR TR1 Readings',
+          equipment: '2SHR TR1',
+          description: 'Hourly readings for transformer',
+          fields: [
+            { id: 'f1', name: 'Amperage (AMP)', type: 'number', required: true, unit: 'A', validation: { min: 0, max: 999 } },
+            { id: 'f2', name: 'MW (Real Power)', type: 'number', required: true, unit: 'MW', validation: { min: 0, max: 999 } },
+            { id: 'f3', name: 'MVAR (Reactive)', type: 'number', required: true, unit: 'MVAR', validation: { min: 0, max: 999 } },
+            { id: 'f4', name: 'Voltage (KV)', type: 'number', required: true, unit: 'KV', validation: { min: 0, max: 999 } }
+          ],
+          version: 2,
+          status: 'PUBLISHED',
+          createdAt: '2026-03-15T10:00:00Z',
+          history: [
+            { version: 1, status: 'PUBLISHED', changedAt: '2026-03-15T10:00:00Z', changesSummary: '4 fields' },
+            { version: 2, status: 'PUBLISHED', changedAt: '2026-04-01T14:30:00Z', changesSummary: 'Added validation ranges' }
+          ]
+        }
+      ]);
+      const [editingTemplate, setEditingTemplate] = useState(null);
+
+      const handleEdit = (id) => {
+        const template = templates.find(t => t.id === id);
+        setEditingTemplate(template);
+        setCurrentPage('edit');
+      };
+
+      const handleSave = (template) => {
+        const idx = templates.findIndex(t => t.id === template.id);
+        if (idx >= 0) {
+          const updated = [...templates];
+          updated[idx] = template;
+          setTemplates(updated);
+        } else {
+          setTemplates([...templates, template]);
+        }
+        setCurrentPage('list');
+      };
+
+      const handleClone = (id) => {
+        const template = templates.find(t => t.id === id);
+        const cloned = {
+          ...template,
+          id: `template-${Date.now()}`,
+          name: `${template.name} (Copy)`,
+          version: 1,
+          status: 'DRAFT',
+          createdAt: new Date().toISOString(),
+          history: []
+        };
+        setEditingTemplate(cloned);
+        setCurrentPage('edit');
+      };
+
+      const handleDelete = (id) => {
+        setTemplates(templates.filter(t => t.id !== id));
+      };
+
+      const pageTitle = currentPage === 'list' ? 'Equipment Templates' : currentPage === 'create' ? 'Create Template' : 'Edit Template';
+
+      return (
+        <div className="app">
+          <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Header title={`⚙️ ${pageTitle}`} onCreateClick={() => { setEditingTemplate(null); setCurrentPage('create'); }} currentPage={currentPage} />
+            {currentPage === 'list' && (
+              <TemplatesList templates={templates} onEdit={handleEdit} onClone={handleClone} onDelete={handleDelete} />
+            )}
+            {(currentPage === 'create' || currentPage === 'edit') && (
+              <TemplateBuilder
+                initialTemplate={editingTemplate}
+                onSave={handleSave}
+                onCancel={() => setCurrentPage('list')}
+                isNew={currentPage === 'create'}
+              />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

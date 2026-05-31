@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NISO — Hourly Readings</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+
+    .login-page { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .login-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); width: 100%; max-width: 400px; }
+    .login-container h1 { font-size: 28px; margin-bottom: 8px; }
+    .login-container p { color: #666; margin-bottom: 24px; font-size: 14px; }
+    .login-form { display: flex; flex-direction: column; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group label { font-weight: 600; font-size: 14px; }
+    .form-group input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    .btn-login { padding: 12px; background: #667eea; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; }
+    .btn-login:hover { background: #764ba2; }
+
+    .app-wrapper { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: #1a1a1a; color: white; padding: 20px 0; }
+    .logo { padding: 0 20px 24px; font-size: 20px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
+    .nav { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+    .nav-item { padding: 12px 16px; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 13px; border-radius: 4px; transition: all 0.2s; }
+    .nav-item:hover { background: rgba(255,255,255,0.1); }
+    .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+
+    .main-content { flex: 1; display: flex; flex-direction: column; }
+    .header { background: white; padding: 20px 30px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 24px; }
+    .user-menu { display: flex; gap: 20px; align-items: center; font-size: 13px; }
+    .user-info { text-align: right; }
+    .user-name { font-weight: 600; }
+    .user-role { font-size: 11px; color: #888; }
+    .logout-btn { padding: 8px 16px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+
+    .content { flex: 1; padding: 30px; overflow-y: auto; }
+    .page-title { margin-bottom: 24px; }
+    .page-title h2 { font-size: 24px; margin-bottom: 8px; }
+    .page-title p { color: #888; font-size: 13px; }
+
+    .controls { display: flex; gap: 12px; margin-bottom: 24px; align-items: center; }
+    .controls input, .controls select, .controls button { padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+    .btn { padding: 10px 16px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:hover { background: #764ba2; }
+
+    .form-card { background: white; padding: 24px; border-radius: 8px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .form-card h3 { font-size: 16px; margin-bottom: 16px; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .form-item { display: flex; flex-direction: column; gap: 6px; }
+    .form-item label { font-size: 13px; font-weight: 600; }
+    .form-item input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+    .form-item input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee; }
+
+    .equipment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .equipment-btn { padding: 12px; border: 2px solid #ddd; border-radius: 4px; background: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
+    .equipment-btn:hover { border-color: #667eea; background: rgba(102,126,234,0.05); }
+    .equipment-btn.selected { border-color: #667eea; background: #667eea; color: white; }
+
+    .reference-box { background: #f9f9f9; border-left: 3px solid #ddd; padding: 12px; margin-bottom: 16px; font-size: 12px; color: #666; }
+    .reference-label { font-weight: 600; color: #333; margin-bottom: 4px; }
+
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; }
+    th { background: #f9f9f9; padding: 12px; text-align: left; font-weight: 600; font-size: 12px; border-bottom: 2px solid #ddd; }
+    td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+    tr:hover { background: #fafafa; }
+
+    .empty { text-align: center; padding: 60px 20px; color: #888; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const EQUIPMENT = {
+      '330KV': [
+        { id: '330k-1', name: '2SHR TR1' },
+        { id: '330k-2', name: '2JEB TR1' },
+      ],
+      'TRANSFORMER': [
+        { id: 'tr-1', name: '2SHR-KTP 1' },
+        { id: 'tr-2', name: '2SHR-MND1' },
+      ],
+      'FEEDER': [
+        { id: 'fd-1', name: '2SHR-MRB1' },
+        { id: 'fd-2', name: '2MRB-ZGU1' },
+      ]
+    };
+
+    function LoginPage({ onLogin }) {
+      const [email, setEmail] = useState('operator@niso.com');
+      const [password, setPassword] = useState('password');
+
+      return (
+        <div className="login-page">
+          <div className="login-container">
+            <h1>NISO</h1>
+            <p>Energy Management System</p>
+            <form className="login-form" onSubmit={(e) => { e.preventDefault(); onLogin({ fullName: 'John Operator', role: 'OPERATOR' }); }}>
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              <button type="submit" className="btn-login">Login</button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function ReadingsPage({ user, onLogout }) {
+      const [selectedDate, setSelectedDate] = useState('2026-04-01');
+      const [equipmentType, setEquipmentType] = useState('330KV');
+      const [selectedEquipment, setSelectedEquipment] = useState(null);
+      const [readings, setReadings] = useState([]);
+      const [formData, setFormData] = useState({});
+
+      const getNextHour = () => {
+        const today = readings.filter(r => r.date === selectedDate);
+        const hours = today.map(r => r.hour).sort((a, b) => b - a);
+        return hours.length === 0 ? 1 : (hours[0] + 1 <= 24 ? hours[0] + 1 : null);
+      };
+
+      const getLastReading = () => {
+        const today = readings.filter(r => r.date === selectedDate && r.equipment?.id === selectedEquipment?.id);
+        return today.length > 0 ? today[today.length - 1] : null;
+      };
+
+      const nextHour = getNextHour();
+      const lastReading = getLastReading();
+
+      const handleAddReading = () => {
+        if (nextHour !== null && selectedEquipment) {
+          setFormData({ hour: nextHour });
+        }
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!selectedEquipment || !formData.hour) return;
+
+        const newReading = {
+          id: `${selectedEquipment.id}-${selectedDate}-${formData.hour}`,
+          date: selectedDate,
+          equipment: selectedEquipment,
+          type: equipmentType,
+          hour: formData.hour,
+          data: { ...formData },
+          timestamp: new Date().toLocaleTimeString()
+        };
+
+        setReadings([...readings, newReading]);
+        setFormData({ hour: nextHour + 1 <= 24 ? nextHour + 1 : null });
+      };
+
+      const getFormFields = (type) => {
+        const fields = {
+          '330KV': [
+            { label: 'Amperage (AMP)', field: 'amp' },
+            { label: 'MW', field: 'mw' },
+            { label: 'MX', field: 'mx' },
+            { label: 'KV', field: 'kv' }
+          ],
+          'TRANSFORMER': [
+            { label: 'Amperage (AMP)', field: 'amp' },
+            { label: 'MW', field: 'mw' },
+            { label: 'MX', field: 'mx' },
+            { label: 'TAP', field: 'tap' },
+            { label: 'Winding Temp', field: 'wind' },
+            { label: 'Oil Temp', field: 'oil' }
+          ],
+          'FEEDER': [
+            { label: 'MW', field: 'mw' },
+            { label: 'Amperage (AMP)', field: 'amp' }
+          ]
+        };
+        return fields[type] || [];
+      };
+
+      return (
+        <div className="app-wrapper">
+          <div className="sidebar">
+            <div className="logo">NISO</div>
+            <div className="nav">
+              <div className="nav-item active">Hourly Readings</div>
+            </div>
+          </div>
+
+          <div className="main-content">
+            <div className="header">
+              <h1>Hourly Readings</h1>
+              <div className="user-menu">
+                <div className="user-info">
+                  <div className="user-name">{user.fullName}</div>
+                  <div className="user-role">{user.role}</div>
+                </div>
+                <button className="logout-btn" onClick={onLogout}>Logout</button>
+              </div>
+            </div>
+
+            <div className="content">
+              <div className="page-title">
+                <h2>Record Equipment Readings</h2>
+                <p>Select equipment type, equipment, then record readings by hour</p>
+              </div>
+
+              <div className="controls">
+                <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                {nextHour !== null && selectedEquipment && (
+                  <button className="btn btn-primary" onClick={handleAddReading}>
+                    + Add New Hour Reading ({nextHour}:00)
+                  </button>
+                )}
+              </div>
+
+              <div className="form-card">
+                <h3>Equipment Type</h3>
+                <div className="equipment-grid">
+                  {Object.keys(EQUIPMENT).map((type) => (
+                    <button
+                      key={type}
+                      className={`equipment-btn ${equipmentType === type ? 'selected' : ''}`}
+                      onClick={() => {
+                        setEquipmentType(type);
+                        setSelectedEquipment(null);
+                      }}
+                    >
+                      {type === '330KV' ? '330KV' : type === 'TRANSFORMER' ? 'Transformer' : 'Feeder'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-card">
+                <h3>Select Equipment</h3>
+                <div className="equipment-grid">
+                  {EQUIPMENT[equipmentType].map((eq) => (
+                    <button
+                      key={eq.id}
+                      className={`equipment-btn ${selectedEquipment?.id === eq.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedEquipment(eq)}
+                    >
+                      {eq.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {selectedEquipment && Object.keys(formData).length > 0 && formData.hour && (
+                <form className="form-card" onSubmit={handleSubmit}>
+                  <h3>Enter Data: {selectedEquipment.name} — Hour {formData.hour}:00</h3>
+                  
+                  {lastReading && (
+                    <div className="reference-box">
+                      <div className="reference-label">Previous Hour ({lastReading.hour}:00) Reference:</div>
+                      {Object.entries(lastReading.data).map(([k, v]) => v && k !== 'hour' && (
+                        <div key={k}>{k.toUpperCase()}: {v}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="form-row">
+                    {getFormFields(equipmentType).map(({ label, field }) => (
+                      <div key={field} className="form-item">
+                        <label>{label}</label>
+                        <input
+                          type="number"
+                          value={formData[field] || ''}
+                          onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                          placeholder="0.0"
+                          step="0.1"
+                          required
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="form-actions">
+                    <button type="submit" className="btn btn-primary">Save & Next Hour</button>
+                    <button type="button" className="btn" style={{ background: '#f0f0f0', color: '#333' }} onClick={() => setFormData({})}>Cancel</button>
+                  </div>
+                </form>
+              )}
+
+              {readings.length > 0 && (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Equipment</th>
+                      <th>Type</th>
+                      <th>Hour</th>
+                      <th>Data</th>
+                      <th>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {readings.filter(r => r.date === selectedDate).map((r) => (
+                      <tr key={r.id}>
+                        <td><strong>{r.equipment.name}</strong></td>
+                        <td>{r.type}</td>
+                        <td>{r.hour}:00</td>
+                        <td style={{ fontSize: '12px', color: '#666' }}>
+                          {Object.entries(r.data).filter(([k, v]) => k !== 'hour' && v).map(([k, v]) => `${k.toUpperCase()}: ${v}`).join(' | ')}
+                        </td>
+                        <td>{r.timestamp}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {readings.length === 0 && !formData.hour && (
+                <div className="empty"><p>Select equipment type and equipment to start</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [user, setUser] = useState(null);
+      if (!user) return <LoginPage onLogin={setUser} />;
+      return <ReadingsPage user={user} onLogout={() => setUser(null)} />;
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

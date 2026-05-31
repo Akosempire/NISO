@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NISO Analytics — Regional Trends</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/chart.js@3.9.1/dist/chart.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+    
+    .app { display: flex; min-height: 100vh; }
+    
+    /* SIDEBAR */
+    .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #e0e0e0; padding: 20px 0; overflow-y: auto; }
+    .sidebar-logo { padding: 0 16px 20px; font-size: 16px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e0e0e0; margin-bottom: 16px; }
+    .nav-section { padding: 0 8px; margin-bottom: 12px; }
+    .nav-section-title { padding: 0 8px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; }
+    .nav-item { padding: 8px 12px; border-radius: 3px; font-size: 13px; cursor: pointer; color: #666; margin-bottom: 2px; transition: all 0.2s; }
+    .nav-item:hover { background: #f0f0f0; }
+    .nav-item.active { background: #e3f2fd; color: #2563eb; font-weight: 600; }
+    
+    /* HEADER */
+    .header { padding: 20px 24px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+    .header-title { font-size: 20px; font-weight: 700; }
+    .header-controls { display: flex; gap: 12px; align-items: center; }
+    .control-label { font-size: 12px; font-weight: 600; color: #666; }
+    .control-input { padding: 6px 8px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; }
+    
+    /* MAIN CONTENT */
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+    
+    /* FILTERS */
+    .filter-bar { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+    .filter-group { display: flex; gap: 8px; align-items: center; }
+    .filter-label { font-size: 12px; font-weight: 600; color: #666; }
+    .filter-select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; }
+    .btn { padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-primary:hover { background: #1e53d6; }
+    
+    /* METRICS GRID */
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .metric-card { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+    .metric-card:hover { border-color: #2563eb; box-shadow: 0 4px 12px rgba(37,99,235,0.1); }
+    .metric-label { font-size: 12px; color: #999; margin-bottom: 8px; font-weight: 600; }
+    .metric-value { font-size: 28px; font-weight: 700; color: #2563eb; margin-bottom: 4px; }
+    .metric-change { font-size: 12px; color: #666; }
+    .metric-change.up { color: #047857; }
+    .metric-change.down { color: #d32f2f; }
+    
+    /* CHARTS */
+    .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px; }
+    .chart-container { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; }
+    .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    .chart-canvas { position: relative; height: 300px; margin-bottom: 16px; }
+    canvas { max-height: 300px; }
+    
+    /* REGIONAL COMPARISON TABLE */
+    .table-container { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; }
+    .table-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #666; border-bottom: 1px solid #e0e0e0; background: #f9f9f9; }
+    td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+    tr:hover { background: #fafafa; cursor: pointer; }
+    
+    /* BADGES */
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+    .badge-green { background: #e6f9f0; color: #047857; }
+    .badge-amber { background: #fffbeb; color: #b45309; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    
+    /* DETAILED REPORT */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 999; display: flex; align-items: center; justify-content: center; }
+    .modal { background: white; border-radius: 4px; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .modal-header { padding: 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 18px; font-weight: 600; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+    .modal-content { padding: 20px; }
+    
+    /* THRESHOLD SETTINGS */
+    .threshold-section { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; margin-bottom: 16px; }
+    .threshold-item { display: grid; grid-template-columns: 150px 1fr auto; gap: 12px; margin-bottom: 12px; align-items: center; }
+    .threshold-item:last-child { margin-bottom: 0; }
+    .threshold-label { font-size: 12px; font-weight: 600; }
+    .threshold-input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; width: 60px; }
+    .threshold-unit { font-size: 12px; color: #999; }
+    
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    /* ===== MOCK DATA GENERATOR ===== */
+    const generateAnalyticsData = () => {
+      const regions = ['NORTH', 'SOUTH', 'WEST', 'EAST'];
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        return d.toISOString().split('T')[0];
+      });
+
+      const regionData = {};
+      regions.forEach(region => {
+        regionData[region] = {
+          sla: Array.from({ length: 7 }, () => 85 + Math.random() * 15),
+          interruptions: Array.from({ length: 7 }, () => Math.floor(Math.random() * 8)),
+          readings: Array.from({ length: 7 }, () => Math.floor(120 + Math.random() * 80)),
+          forecast_accuracy: Array.from({ length: 7 }, () => 90 + Math.random() * 10)
+        };
+      });
+
+      return { regions, last7Days, regionData };
+    };
+
+    const analysisData = generateAnalyticsData();
+
+    /* ===== SIDEBAR ===== */
+    function Sidebar({ currentPage, onPageChange }) {
+      return (
+        <div className="sidebar">
+          <div className="sidebar-logo">NISO</div>
+          
+          <div className="nav-section">
+            <div className="nav-section-title">Analytics</div>
+            <div className="nav-item active" onClick={() => onPageChange('dashboard')}>Dashboard</div>
+            <div className="nav-item" onClick={() => onPageChange('sla')}>SLA Trends</div>
+            <div className="nav-item" onClick={() => onPageChange('interruptions')}>Interruption Analysis</div>
+            <div className="nav-item" onClick={() => onPageChange('productivity')}>Operator Productivity</div>
+            <div className="nav-item" onClick={() => onPageChange('equipment')}>Equipment Health</div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-title">Operations</div>
+            <div className="nav-item" onClick={() => onPageChange('dashboard')}>Back to System</div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== HEADER ===== */
+    function Header({ timeRange, onTimeRangeChange, onThresholdsClick }) {
+      return (
+        <div className="header">
+          <div className="header-title">📊 Analytics & Regional Trends</div>
+          <div className="header-controls">
+            <div className="control-label">Time Range:</div>
+            <select className="control-input" value={timeRange} onChange={(e) => onTimeRangeChange(e.target.value)}>
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+              <option value="90d">Last 90 Days</option>
+            </select>
+            <button className="btn btn-primary" onClick={onThresholdsClick}>⚙️ Thresholds</button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== METRICS CARDS ===== */
+    function MetricsSection({ data }) {
+      const calculateMetrics = () => {
+        const allRegions = Object.values(data.regionData);
+        const avgSLA = (allRegions.reduce((sum, r) => sum + r.sla.reduce((a, b) => a + b) / r.sla.length, 0) / allRegions.length).toFixed(1);
+        const totalInterruptions = allRegions.reduce((sum, r) => sum + r.interruptions.reduce((a, b) => a + b), 0);
+        const totalReadings = allRegions.reduce((sum, r) => sum + r.readings.reduce((a, b) => a + b), 0);
+        const avgAccuracy = (allRegions.reduce((sum, r) => sum + r.forecast_accuracy.reduce((a, b) => a + b) / r.forecast_accuracy.length, 0) / allRegions.length).toFixed(1);
+
+        return [
+          { label: 'Avg SLA %', value: avgSLA, change: '+2.3%', trend: 'up' },
+          { label: 'Total Interruptions', value: totalInterruptions, change: '-5 vs last week', trend: 'up' },
+          { label: 'Readings This Week', value: totalReadings, change: '+12%', trend: 'up' },
+          { label: 'Forecast Accuracy', value: avgAccuracy + '%', change: '+1.8%', trend: 'up' }
+        ];
+      };
+
+      const metrics = calculateMetrics();
+
+      return (
+        <div className="metrics-grid">
+          {metrics.map((m, i) => (
+            <div key={i} className="metric-card">
+              <div className="metric-label">{m.label}</div>
+              <div className="metric-value">{m.value}</div>
+              <div className={`metric-change ${m.trend}`}>{m.trend === 'up' ? '📈' : '📉'} {m.change}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    /* ===== CHART COMPONENT ===== */
+    function LineChart({ title, labels, datasets, onDataPointClick }) {
+      const canvasRef = useRef(null);
+      const chartRef = useRef(null);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+
+        if (chartRef.current) chartRef.current.destroy();
+
+        const ctx = canvasRef.current.getContext('2d');
+        chartRef.current = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: datasets.map((ds, idx) => ({
+              label: ds.label,
+              data: ds.data,
+              borderColor: ['#2563eb', '#047857', '#d32f2f', '#b45309'][idx % 4],
+              backgroundColor: ['rgba(37,99,235,0.05)', 'rgba(4,120,87,0.05)', 'rgba(211,47,47,0.05)', 'rgba(180,83,9,0.05)'][idx % 4],
+              tension: 0.4,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: ['#2563eb', '#047857', '#d32f2f', '#b45309'][idx % 4]
+            }))
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: datasets.length > 1, position: 'top' }
+            },
+            scales: {
+              y: { beginAtZero: true, max: 100 }
+            },
+            onClick: (event, elements) => {
+              if (elements.length > 0 && onDataPointClick) {
+                onDataPointClick(labels[elements[0].index], elements[0].datasetIndex);
+              }
+            }
+          }
+        });
+
+        return () => {
+          if (chartRef.current) chartRef.current.destroy();
+        };
+      }, [labels, datasets, onDataPointClick]);
+
+      return (
+        <div className="chart-container">
+          <div className="chart-title">{title}</div>
+          <canvas ref={canvasRef}></canvas>
+        </div>
+      );
+    }
+
+    /* ===== REGIONAL COMPARISON TABLE ===== */
+    function RegionalComparison({ data, onRowClick }) {
+      const rows = data.regions.map(region => {
+        const regionData = data.regionData[region];
+        const avgSLA = (regionData.sla.reduce((a, b) => a + b) / regionData.sla.length).toFixed(1);
+        const totalInterruptions = regionData.interruptions.reduce((a, b) => a + b);
+        const avgAccuracy = (regionData.forecast_accuracy.reduce((a, b) => a + b) / regionData.forecast_accuracy.length).toFixed(1);
+        const status = avgSLA > 95 ? 'green' : avgSLA > 90 ? 'amber' : 'red';
+
+        return { region, avgSLA, totalInterruptions, avgAccuracy, status };
+      });
+
+      rows.sort((a, b) => parseFloat(b.avgSLA) - parseFloat(a.avgSLA));
+
+      return (
+        <div className="table-container">
+          <div className="table-title">Regional Performance Ranking</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Region</th>
+                <th>Avg SLA %</th>
+                <th>Status</th>
+                <th>Interruptions</th>
+                <th>Forecast Accuracy</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i} onClick={() => onRowClick(row.region)}>
+                  <td><strong>{row.region}</strong></td>
+                  <td>{row.avgSLA}%</td>
+                  <td><span className={`badge badge-${row.status}`}>{row.status === 'green' ? '✓ On Target' : row.status === 'amber' ? '⚠ Warning' : '✗ Critical'}</span></td>
+                  <td>{row.totalInterruptions}</td>
+                  <td>{row.avgAccuracy}%</td>
+                  <td>→</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    /* ===== DETAILED REPORT MODAL ===== */
+    function DetailedReport({ regionName, data, onClose }) {
+      if (!regionName) return null;
+
+      const regionData = data.regionData[regionName];
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">📊 {regionName} Region — Detailed Analysis</div>
+              <button className="modal-close" onClick={onClose}>×</button>
+            </div>
+            <div className="modal-content">
+              <div className="chart-grid">
+                <LineChart
+                  title="SLA Performance (Last 7 Days)"
+                  labels={data.last7Days}
+                  datasets={[{ label: 'SLA %', data: regionData.sla }]}
+                />
+                <LineChart
+                  title="Active Interruptions"
+                  labels={data.last7Days}
+                  datasets={[{ label: 'Count', data: regionData.interruptions }]}
+                />
+              </div>
+              <div className="chart-grid">
+                <LineChart
+                  title="Readings Recorded"
+                  labels={data.last7Days}
+                  datasets={[{ label: 'Count', data: regionData.readings }]}
+                />
+                <LineChart
+                  title="Forecast Accuracy"
+                  labels={data.last7Days}
+                  datasets={[{ label: 'Accuracy %', data: regionData.forecast_accuracy }]}
+                />
+              </div>
+
+              <div className="table-container" style={{ marginTop: '24px' }}>
+                <div className="table-title">Key Insights</div>
+                <ul style={{ paddingLeft: '20px', lineHeight: '1.8' }}>
+                  <li>Average SLA: {(regionData.sla.reduce((a, b) => a + b) / regionData.sla.length).toFixed(1)}%</li>
+                  <li>Total Interruptions: {regionData.interruptions.reduce((a, b) => a + b)} incidents</li>
+                  <li>Forecast Accuracy: {(regionData.forecast_accuracy.reduce((a, b) => a + b) / regionData.forecast_accuracy.length).toFixed(1)}%</li>
+                  <li>Readings Recorded: {regionData.readings.reduce((a, b) => a + b)} entries</li>
+                  <li>Trend: <strong style={{ color: '#047857' }}>↑ Improving</strong></li>
+                </ul>
+              </div>
+
+              <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
+                <button className="btn btn-primary" onClick={() => window.print()}>📥 Export as PDF</button>
+                <button className="btn" onClick={() => alert('Share link copied!')}>🔗 Share as Link</button>
+                <button className="btn" onClick={() => alert('Downloaded as CSV')}>📊 Download CSV</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== THRESHOLD SETTINGS ===== */
+    function ThresholdSettings({ onClose, onSave }) {
+      const [thresholds, setThresholds] = useState({
+        sla_critical: 90,
+        sla_warning: 95,
+        interruption_max: 8,
+        forecast_accuracy_min: 85
+      });
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">⚙️ Configure Alert Thresholds</div>
+              <button className="modal-close" onClick={onClose}>×</button>
+            </div>
+            <div className="modal-content">
+              <div className="threshold-section">
+                <div style={{ fontWeight: 600, marginBottom: '16px' }}>SLA Thresholds</div>
+                <div className="threshold-item">
+                  <div className="threshold-label">Critical Alert Below</div>
+                  <input className="threshold-input" type="number" value={thresholds.sla_critical} onChange={(e) => setThresholds({ ...thresholds, sla_critical: e.target.value })} />
+                  <div className="threshold-unit">%</div>
+                </div>
+                <div className="threshold-item">
+                  <div className="threshold-label">Warning Alert Below</div>
+                  <input className="threshold-input" type="number" value={thresholds.sla_warning} onChange={(e) => setThresholds({ ...thresholds, sla_warning: e.target.value })} />
+                  <div className="threshold-unit">%</div>
+                </div>
+              </div>
+
+              <div className="threshold-section">
+                <div style={{ fontWeight: 600, marginBottom: '16px' }}>Interruption Thresholds</div>
+                <div className="threshold-item">
+                  <div className="threshold-label">Max Daily Interruptions</div>
+                  <input className="threshold-input" type="number" value={thresholds.interruption_max} onChange={(e) => setThresholds({ ...thresholds, interruption_max: e.target.value })} />
+                  <div className="threshold-unit">count</div>
+                </div>
+              </div>
+
+              <div className="threshold-section">
+                <div style={{ fontWeight: 600, marginBottom: '16px' }}>Forecast Accuracy</div>
+                <div className="threshold-item">
+                  <div className="threshold-label">Minimum Acceptable Accuracy</div>
+                  <input className="threshold-input" type="number" value={thresholds.forecast_accuracy_min} onChange={(e) => setThresholds({ ...thresholds, forecast_accuracy_min: e.target.value })} />
+                  <div className="threshold-unit">%</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '24px' }}>
+                <button className="btn btn-primary" onClick={() => { onSave(thresholds); onClose(); }}>💾 Save Thresholds</button>
+                <button className="btn" onClick={onClose}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== MAIN APP ===== */
+    function App() {
+      const [currentPage, setCurrentPage] = useState('dashboard');
+      const [timeRange, setTimeRange] = useState('7d');
+      const [selectedRegion, setSelectedRegion] = useState(null);
+      const [showThresholds, setShowThresholds] = useState(false);
+
+      return (
+        <div className="app">
+          <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Header
+              timeRange={timeRange}
+              onTimeRangeChange={setTimeRange}
+              onThresholdsClick={() => setShowThresholds(true)}
+            />
+            <div className="content">
+              <MetricsSection data={analysisData} />
+
+              <div className="filter-bar">
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#666' }}>Click any data point or table row to drill down into details</span>
+              </div>
+
+              <div className="chart-grid">
+                <LineChart
+                  title="SLA Trends (All Regions)"
+                  labels={analysisData.last7Days}
+                  datasets={analysisData.regions.map((region, idx) => ({
+                    label: region,
+                    data: analysisData.regionData[region].sla
+                  }))}
+                  onDataPointClick={(date, regionIdx) => alert(`SLA on ${date}: ${analysisData.regionData[analysisData.regions[regionIdx]].sla}`)}
+                />
+                <LineChart
+                  title="Interruptions by Region"
+                  labels={analysisData.last7Days}
+                  datasets={analysisData.regions.map((region, idx) => ({
+                    label: region,
+                    data: analysisData.regionData[region].interruptions
+                  }))}
+                />
+              </div>
+
+              <div className="chart-grid">
+                <LineChart
+                  title="Equipment Health Score"
+                  labels={analysisData.last7Days}
+                  datasets={analysisData.regions.map((region, idx) => ({
+                    label: region,
+                    data: analysisData.regionData[region].forecast_accuracy
+                  }))}
+                />
+                <LineChart
+                  title="Operator Productivity (Readings/Day)"
+                  labels={analysisData.last7Days}
+                  datasets={analysisData.regions.map((region, idx) => ({
+                    label: region,
+                    data: analysisData.regionData[region].readings
+                  }))}
+                />
+              </div>
+
+              <RegionalComparison data={analysisData} onRowClick={setSelectedRegion} />
+            </div>
+          </div>
+
+          {selectedRegion && (
+            <DetailedReport
+              regionName={selectedRegion}
+              data={analysisData}
+              onClose={() => setSelectedRegion(null)}
+            />
+          )}
+
+          {showThresholds && (
+            <ThresholdSettings
+              onClose={() => setShowThresholds(false)}
+              onSave={(thresholds) => alert('Thresholds saved: ' + JSON.stringify(thresholds))}
+            />
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

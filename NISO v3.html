@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NISO v3 — Notifications</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: white; color: #333; }
+    
+    .app-wrapper { display: flex; min-height: 100vh; }
+    
+    /* SIDEBAR */
+    .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #e0e0e0; padding: 24px 0; overflow-y: auto; }
+    .sidebar-logo { padding: 0 20px 24px; font-size: 18px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; }
+    .user-context { padding: 12px 16px; background: #f0f0f0; margin: 0 12px 16px; border-radius: 4px; font-size: 11px; }
+    .context-label { font-weight: 600; color: #666; }
+    .context-value { color: #2563eb; font-weight: 600; margin-top: 2px; }
+    .role-switcher { padding: 0 16px; margin-bottom: 20px; }
+    .role-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; margin-bottom: 8px; display: block; }
+    .role-buttons { display: flex; flex-direction: column; gap: 4px; }
+    .role-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .role-btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .role-btn.active { background: #2563eb; color: white; border-color: #2563eb; font-weight: 600; }
+    .nav-section { padding: 0 12px; margin-bottom: 16px; }
+    .nav-section-title { padding: 0 8px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; }
+    .nav-item { padding: 10px 12px; border-radius: 3px; font-size: 13px; cursor: pointer; transition: all 0.2s; color: #666; }
+    .nav-item:hover { background: #f0f0f0; }
+    .nav-item.active { background: #e3f2fd; color: #2563eb; font-weight: 600; }
+    
+    /* TOP BAR */
+    .topbar { background: white; border-bottom: 1px solid #e0e0e0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar-left { display: flex; align-items: center; gap: 20px; }
+    .topbar-title { font-size: 18px; font-weight: 600; }
+    .topbar-right { display: flex; gap: 16px; align-items: center; }
+    .notification-bell { position: relative; cursor: pointer; font-size: 20px; }
+    .notification-badge { position: absolute; top: -4px; right: -8px; background: #d32f2f; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+    .user-info { text-align: right; font-size: 12px; }
+    .user-name { font-weight: 600; }
+    .user-role { color: #999; font-size: 11px; }
+    
+    /* MAIN CONTENT */
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .content-area { flex: 1; overflow-y: auto; padding: 24px; }
+    
+    /* DASHBOARD */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .card { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; }
+    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #666; }
+    .card-value { font-size: 32px; font-weight: 700; color: #2563eb; }
+    .card-meta { font-size: 12px; color: #999; margin-top: 8px; }
+    
+    /* TABLES */
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f9f9f9; }
+    th { padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #666; border-bottom: 1px solid #e0e0e0; }
+    td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+    tr:hover { background: #fafafa; }
+    .table-section { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+    .table-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    
+    /* BUTTONS */
+    .btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-primary:hover { background: #1e53d6; }
+    .btn-sm { padding: 6px 10px; font-size: 11px; }
+    
+    /* BADGES */
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+    .badge-green { background: #e6f9f0; color: #047857; }
+    .badge-amber { background: #fffbeb; color: #b45309; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    
+    /* NOTIFICATION PANEL */
+    .notification-panel { position: fixed; top: 80px; right: 24px; width: 380px; max-height: 500px; background: white; border: 1px solid #e0e0e0; border-radius: 4px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); z-index: 500; display: flex; flex-direction: column; animation: slideIn 0.3s ease-out; }
+    @keyframes slideIn { from { transform: translateX(420px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .notification-panel-header { padding: 16px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+    .notification-panel-close { background: none; border: none; font-size: 20px; cursor: pointer; }
+    .notification-panel-content { flex: 1; overflow-y: auto; }
+    .notification-item { padding: 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s; }
+    .notification-item:hover { background: #f9f9f9; }
+    .notification-item.unread { background: #e3f2fd; }
+    .notification-item-title { font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+    .notification-item-message { font-size: 12px; color: #666; margin-bottom: 8px; line-height: 1.4; }
+    .notification-item-time { font-size: 11px; color: #999; }
+    .notification-item-actions { margin-top: 8px; display: flex; gap: 8px; }
+    .notification-item-action { padding: 4px 8px; background: #f0f0f0; border-radius: 2px; font-size: 11px; cursor: pointer; transition: background 0.2s; }
+    .notification-item-action:hover { background: #e0e0e0; }
+    .notification-empty { padding: 40px 16px; text-align: center; color: #999; }
+    
+    /* NOTIFICATION PREFERENCES */
+    .preferences-section { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+    .preference-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+    .preference-item:last-child { border-bottom: none; }
+    .preference-label { display: flex; flex-direction: column; }
+    .preference-title { font-weight: 600; margin-bottom: 4px; }
+    .preference-desc { font-size: 12px; color: #999; }
+    .preference-controls { display: flex; gap: 8px; }
+    .toggle-switch { position: relative; width: 40px; height: 24px; background: #ddd; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+    .toggle-switch.on { background: #2563eb; }
+    .toggle-switch-knob { position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: left 0.2s; }
+    .toggle-switch.on .toggle-switch-knob { left: 18px; }
+    
+    /* QUEUE STATUS */
+    .queue-status-bar { display: flex; gap: 12px; padding: 12px; background: #f0f8ff; border-radius: 3px; margin-bottom: 16px; font-size: 12px; }
+    .queue-status-item { display: flex; align-items: center; gap: 6px; }
+    .queue-status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-pending { background: #b45309; }
+    .status-delivered { background: #047857; }
+    .status-failed { background: #d32f2f; }
+    
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    
+    /* FORMS */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #333; }
+    .form-input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; }
+    .form-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .form-checkbox { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .form-checkbox input { cursor: pointer; }
+    .form-checkbox label { cursor: pointer; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    /* ===== NOTIFICATION ENGINE (SIMPLIFIED) ===== */
+    class NotificationEngineUI {
+      constructor() {
+        this.queue = [];
+        this.history = [];
+        this.inApp = [];
+        this.listeners = [];
+      }
+
+      on(event, callback) {
+        this.listeners.push({ event, callback });
+      }
+
+      emit(event, data) {
+        this.listeners.forEach(l => {
+          if (l.event === event) l.callback(data);
+        });
+      }
+
+      addNotification(notif) {
+        this.queue.push({
+          id: `notif-${Date.now()}`,
+          ...notif,
+          status: 'PENDING',
+          attempts: 0,
+          createdAt: new Date().toISOString()
+        });
+        this.inApp.unshift({
+          id: `notif-${Date.now()}`,
+          ...notif,
+          read: false
+        });
+        this.emit('notification', notif);
+      }
+
+      getQueueStatus() {
+        return {
+          total: this.queue.length,
+          pending: this.queue.filter(q => q.status === 'PENDING').length,
+          delivered: this.queue.filter(q => q.status === 'DELIVERED').length,
+          failed: this.queue.filter(q => q.status === 'FAILED').length
+        };
+      }
+
+      getInAppNotifications() {
+        return this.inApp;
+      }
+
+      markAsRead(id) {
+        const idx = this.inApp.findIndex(n => n.id === id);
+        if (idx >= 0) this.inApp[idx].read = true;
+      }
+    }
+
+    const engine = new NotificationEngineUI();
+
+    /* ===== ROLE PERMISSIONS ===== */
+    const ROLE_PERMISSIONS = {
+      OPERATOR: { name: 'Operator', scope: 'station' },
+      SUPERVISOR: { name: 'Supervisor', scope: 'station' },
+      STATION_ADMIN: { name: 'Station Admin', scope: 'station' },
+      REGIONAL_ADMIN: { name: 'Regional Admin', scope: 'regional' },
+      HQ_ADMIN: { name: 'HQ Admin', scope: 'national' },
+      VIEWER: { name: 'Viewer', scope: 'shared' }
+    };
+
+    const ROLE_NAV = {
+      OPERATOR: [
+        { section: 'OPERATIONS', items: ['Dashboard', 'Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RECORDS', items: ['Reports'] },
+        { section: 'SETTINGS', items: ['Notifications', 'Knowledge Center'] }
+      ],
+      SUPERVISOR: [
+        { section: 'OPERATIONS', items: ['Dashboard', 'Readings', 'SLA', 'Interruptions', 'Inspections', 'Approvals'] },
+        { section: 'RECORDS', items: ['Reports'] },
+        { section: 'SETTINGS', items: ['Notifications', 'Knowledge Center'] }
+      ],
+      STATION_ADMIN: [
+        { section: 'STATION', items: ['Dashboard', 'Reports'] },
+        { section: 'OPERATIONS', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'SETTINGS', items: ['Notifications', 'Knowledge Center'] }
+      ],
+      REGIONAL_ADMIN: [
+        { section: 'REGIONAL', items: ['Dashboard', 'Reports'] },
+        { section: 'MONITORING', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'SETTINGS', items: ['Notifications', 'Knowledge Center'] }
+      ],
+      HQ_ADMIN: [
+        { section: 'NATIONAL', items: ['Dashboard', 'Reports'] },
+        { section: 'MONITORING', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'SETTINGS', items: ['Notifications', 'Knowledge Center'] }
+      ],
+      VIEWER: [
+        { section: 'SHARED', items: ['Dashboard', 'Reports'] },
+        { section: 'SETTINGS', items: ['Notifications', 'Knowledge Center'] }
+      ]
+    };
+
+    /* ===== SIDEBAR ===== */
+    function Sidebar({ role, onRoleChange, currentPage, onPageChange }) {
+      const navItems = ROLE_NAV[role] || [];
+
+      return (
+        <div className="sidebar">
+          <div className="sidebar-logo">NISO</div>
+          
+          <div className="user-context">
+            <div className="context-label">Scope</div>
+            <div className="context-value">{ROLE_PERMISSIONS[role].scope}</div>
+          </div>
+
+          <div className="role-switcher">
+            <label className="role-label">Switch Role</label>
+            <div className="role-buttons">
+              {Object.keys(ROLE_NAV).map((r) => (
+                <button
+                  key={r}
+                  className={`role-btn ${role === r ? 'active' : ''}`}
+                  onClick={() => onRoleChange(r)}
+                >
+                  {ROLE_PERMISSIONS[r].name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {navItems.map((section) => (
+            <div key={section.section} className="nav-section">
+              <div className="nav-section-title">{section.section}</div>
+              {section.items.map((item) => (
+                <div
+                  key={item}
+                  className={`nav-item ${currentPage === item ? 'active' : ''}`}
+                  onClick={() => onPageChange(item)}
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    /* ===== NOTIFICATION BELL ===== */
+    function NotificationBell({ unreadCount, onOpen }) {
+      return (
+        <div className="notification-bell" onClick={onOpen}>
+          🔔
+          {unreadCount > 0 && <div className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</div>}
+        </div>
+      );
+    }
+
+    /* ===== NOTIFICATION PANEL ===== */
+    function NotificationPanel({ isOpen, onClose, notifications, onMarkAsRead }) {
+      if (!isOpen) return null;
+
+      const unread = notifications.filter(n => !n.read);
+      const read = notifications.filter(n => n.read);
+
+      return (
+        <div className="notification-panel">
+          <div className="notification-panel-header">
+            Notifications
+            <button className="notification-panel-close" onClick={onClose}>×</button>
+          </div>
+          <div className="notification-panel-content">
+            {unread.length === 0 && read.length === 0 ? (
+              <div className="notification-empty">No notifications yet</div>
+            ) : (
+              <>
+                {unread.map(n => (
+                  <div key={n.id} className="notification-item unread" onClick={() => onMarkAsRead(n.id)}>
+                    <div className="notification-item-title">{n.title}</div>
+                    <div className="notification-item-message">{n.message}</div>
+                    <div className="notification-item-time">{new Date(n.createdAt).toLocaleString()}</div>
+                  </div>
+                ))}
+                {read.length > 0 && (
+                  <>
+                    <div style={{ padding: '8px 16px', fontSize: '11px', fontWeight: '600', color: '#999', textTransform: 'uppercase' }}>Earlier</div>
+                    {read.map(n => (
+                      <div key={n.id} className="notification-item">
+                        <div className="notification-item-title" style={{ opacity: 0.6 }}>{n.title}</div>
+                        <div className="notification-item-time">{new Date(n.createdAt).toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== NOTIFICATIONS SETTINGS PAGE ===== */
+    function NotificationsSettings({ role }) {
+      const [preferences, setPreferences] = useState({
+        interruptions: { email: true, sms: true, inApp: true },
+        slaWarnings: { email: true, sms: false, inApp: true },
+        approvals: { email: true, sms: false, inApp: true },
+        monthSeal: { email: true, sms: false, inApp: true },
+        email: 'john.operator@niso.ng',
+        phone: '+234 801 234 5678',
+        quietHours: { enabled: false, start: '22:00', end: '06:00' }
+      });
+
+      const togglePref = (category, channel) => {
+        setPreferences({
+          ...preferences,
+          [category]: {
+            ...preferences[category],
+            [channel]: !preferences[category][channel]
+          }
+        });
+      };
+
+      const [queueStatus, setQueueStatus] = useState(engine.getQueueStatus());
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setQueueStatus(engine.getQueueStatus());
+        }, 2000);
+        return () => clearInterval(interval);
+      }, []);
+
+      return (
+        <>
+          <div className="queue-status-bar">
+            <div className="queue-status-item">
+              <div className="queue-status-dot status-pending"></div>
+              <span>{queueStatus.pending} Pending</span>
+            </div>
+            <div className="queue-status-item">
+              <div className="queue-status-dot status-delivered"></div>
+              <span>{queueStatus.delivered} Delivered</span>
+            </div>
+            <div className="queue-status-item">
+              <div className="queue-status-dot status-failed"></div>
+              <span>{queueStatus.failed} Failed</span>
+            </div>
+            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#666' }}>
+              {navigator.onLine ? '🟢 Online' : '🔴 Offline'}
+            </div>
+          </div>
+
+          <div className="preferences-section">
+            <h3 style={{ marginBottom: '20px' }}>Notification Channels</h3>
+            
+            <div className="preference-item">
+              <div className="preference-label">
+                <div className="preference-title">Interruptions & Faults</div>
+                <div className="preference-desc">Equipment down alerts</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px', paddingLeft: '12px' }}>
+              {['inApp', 'email', 'sms'].map(ch => (
+                <label key={ch} className="form-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={preferences.interruptions[ch]}
+                    onChange={() => togglePref('interruptions', ch)}
+                  />
+                  <span style={{ textTransform: 'capitalize' }}>{ch === 'inApp' ? 'In-App' : ch}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="preference-item">
+              <div className="preference-label">
+                <div className="preference-title">SLA Warnings</div>
+                <div className="preference-desc">Forecast/actual deviations</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px', paddingLeft: '12px' }}>
+              {['inApp', 'email', 'sms'].map(ch => (
+                <label key={ch} className="form-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={preferences.slaWarnings[ch]}
+                    onChange={() => togglePref('slaWarnings', ch)}
+                  />
+                  <span style={{ textTransform: 'capitalize' }}>{ch === 'inApp' ? 'In-App' : ch}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="preference-item">
+              <div className="preference-label">
+                <div className="preference-title">Approvals Required</div>
+                <div className="preference-desc">Pending corrections & reviews</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px', paddingLeft: '12px' }}>
+              {['inApp', 'email', 'sms'].map(ch => (
+                <label key={ch} className="form-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={preferences.approvals[ch]}
+                    onChange={() => togglePref('approvals', ch)}
+                  />
+                  <span style={{ textTransform: 'capitalize' }}>{ch === 'inApp' ? 'In-App' : ch}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="preference-item">
+              <div className="preference-label">
+                <div className="preference-title">Month Seal Notifications</div>
+                <div className="preference-desc">Seal state changes</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', paddingLeft: '12px' }}>
+              {['inApp', 'email', 'sms'].map(ch => (
+                <label key={ch} className="form-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={preferences.monthSeal[ch]}
+                    onChange={() => togglePref('monthSeal', ch)}
+                  />
+                  <span style={{ textTransform: 'capitalize' }}>{ch === 'inApp' ? 'In-App' : ch}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="preferences-section">
+            <h3 style={{ marginBottom: '20px' }}>Contact Information</h3>
+            <div className="form-group">
+              <label className="form-label">Email Address</label>
+              <input className="form-input" type="email" value={preferences.email} onChange={(e) => setPreferences({ ...preferences, email: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Phone Number (for SMS)</label>
+              <input className="form-input" type="tel" value={preferences.phone} onChange={(e) => setPreferences({ ...preferences, phone: e.target.value })} />
+            </div>
+          </div>
+
+          <div className="preferences-section">
+            <h3 style={{ marginBottom: '20px' }}>Quiet Hours</h3>
+            <label className="form-checkbox">
+              <input
+                type="checkbox"
+                checked={preferences.quietHours.enabled}
+                onChange={() => setPreferences({
+                  ...preferences,
+                  quietHours: { ...preferences.quietHours, enabled: !preferences.quietHours.enabled }
+                })}
+              />
+              <span>Suppress non-urgent notifications between</span>
+            </label>
+            {preferences.quietHours.enabled && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingLeft: '28px' }}>
+                <input className="form-input" type="time" value={preferences.quietHours.start} onChange={(e) => setPreferences({ ...preferences, quietHours: { ...preferences.quietHours, start: e.target.value } })} />
+                <input className="form-input" type="time" value={preferences.quietHours.end} onChange={(e) => setPreferences({ ...preferences, quietHours: { ...preferences.quietHours, end: e.target.value } })} />
+              </div>
+            )}
+          </div>
+
+          <button className="btn btn-primary" style={{ width: '100%', marginBottom: '20px' }}>💾 Save Preferences</button>
+        </>
+      );
+    }
+
+    /* ===== DEMO BUTTONS ===== */
+    function DemoBroadcaster() {
+      const sendDemoNotification = (type) => {
+        const notifications = {
+          INTERRUPTION: {
+            type: 'INTERRUPTION',
+            title: '⚠️ Equipment Down: 2SHR TR1',
+            message: '2SHR TR1 interrupted at 14:32. Cause: Overload',
+            priority: 'HIGH'
+          },
+          SLA_WARNING: {
+            type: 'SLA_WARNING',
+            title: '⚠️ SLA Alert: Hour 14:00',
+            message: 'Difference 8.5MW exceeds tolerance. Forecast: 450MW, Actual: 458.5MW',
+            priority: 'MEDIUM'
+          },
+          APPROVAL: {
+            type: 'APPROVAL_REQUIRED',
+            title: '📋 Approval Pending: Readings',
+            message: 'John submitted a readings correction requiring your approval.',
+            priority: 'HIGH'
+          },
+          SEAL: {
+            type: 'MONTH_SEAL',
+            title: '🔒 Month Seal: April 2026',
+            message: 'Month is now SEALED. 720 records affected.',
+            priority: 'MEDIUM'
+          }
+        };
+
+        engine.addNotification(notifications[type]);
+      };
+
+      return (
+        <div className="table-section">
+          <h3>Demo: Send Test Notifications</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+            <button className="btn btn-primary" onClick={() => sendDemoNotification('INTERRUPTION')}>Send Interruption Alert</button>
+            <button className="btn btn-primary" onClick={() => sendDemoNotification('SLA_WARNING')}>Send SLA Warning</button>
+            <button className="btn btn-primary" onClick={() => sendDemoNotification('APPROVAL')}>Send Approval Request</button>
+            <button className="btn btn-primary" onClick={() => sendDemoNotification('SEAL')}>Send Month Seal Notice</button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== MAIN APP ===== */
+    function App() {
+      const [role, setRole] = useState('OPERATOR');
+      const [currentPage, setCurrentPage] = useState('Notifications');
+      const [panelOpen, setPanelOpen] = useState(false);
+      const [notifications, setNotifications] = useState(engine.getInAppNotifications());
+
+      useEffect(() => {
+        const handler = (event) => {
+          setNotifications([...engine.getInAppNotifications()]);
+        };
+        engine.on('notification', handler);
+        
+        // Listen for notification updates
+        const interval = setInterval(() => {
+          setNotifications([...engine.getInAppNotifications()]);
+        }, 1000);
+
+        return () => clearInterval(interval);
+      }, []);
+
+      const unreadCount = notifications.filter(n => !n.read).length;
+
+      const renderContent = () => {
+        switch (currentPage) {
+          case 'Dashboard':
+            return (
+              <div>
+                <div className="dashboard-grid">
+                  <div className="card">
+                    <div className="card-title">Active Interruptions</div>
+                    <div className="card-value">2</div>
+                    <div className="card-meta">Awaiting restoration</div>
+                  </div>
+                  <div className="card">
+                    <div className="card-title">Unread Alerts</div>
+                    <div className="card-value" style={{ color: '#d32f2f' }}>{unreadCount}</div>
+                    <div className="card-meta">Check notification panel</div>
+                  </div>
+                  <div className="card">
+                    <div className="card-title">Pending Approvals</div>
+                    <div className="card-value">1</div>
+                    <div className="card-meta">Requires action</div>
+                  </div>
+                </div>
+              </div>
+            );
+          case 'Notifications':
+            return (
+              <div>
+                <DemoBroadcaster />
+                <NotificationsSettings role={role} />
+              </div>
+            );
+          default:
+            return <div className="empty-state">Select a page from the sidebar</div>;
+        }
+      };
+
+      return (
+        <div className="app-wrapper">
+          <Sidebar role={role} onRoleChange={setRole} currentPage={currentPage} onPageChange={setCurrentPage} />
+          <div className="main-content">
+            <div className="topbar">
+              <div className="topbar-left">
+                <div className="topbar-title">{currentPage}</div>
+              </div>
+              <div className="topbar-right">
+                <NotificationBell unreadCount={unreadCount} onOpen={() => setPanelOpen(!panelOpen)} />
+                <div className="user-info">
+                  <div className="user-name">John Operator</div>
+                  <div className="user-role">{ROLE_PERMISSIONS[role].name}</div>
+                </div>
+              </div>
+            </div>
+            <div className="content-area">
+              {renderContent()}
+            </div>
+          </div>
+
+          <NotificationPanel
+            isOpen={panelOpen}
+            onClose={() => setPanelOpen(false)}
+            notifications={notifications}
+            onMarkAsRead={(id) => {
+              engine.markAsRead(id);
+              setNotifications([...engine.getInAppNotifications()]);
+            }}
+          />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

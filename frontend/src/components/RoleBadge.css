@@ -1,0 +1,33 @@
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1;
+  font-family: inherit;
+}
+
+.role-badge--sm {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.role-badge--md {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.role-badge__glyph {
+  font-size: 1.05em;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.role-badge__label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

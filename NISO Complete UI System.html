@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NISO — Complete Operational Platform</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+    
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #e0e0e0; padding: 24px 0; overflow-y: auto; }
+    .sidebar-logo { padding: 0 20px 24px; font-size: 18px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; }
+    .user-context { padding: 12px 16px; background: #f0f0f0; margin: 0 12px 16px; border-radius: 4px; font-size: 11px; }
+    .context-label { font-weight: 600; color: #666; }
+    .context-value { color: #2563eb; font-weight: 600; }
+    .role-switcher { padding: 0 16px; margin-bottom: 20px; }
+    .role-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; margin-bottom: 8px; display: block; }
+    .role-buttons { display: flex; flex-direction: column; gap: 4px; }
+    .role-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; }
+    .role-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+    .nav-section { padding: 0 12px; margin-bottom: 16px; }
+    .nav-section-title { padding: 0 8px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; }
+    .nav-item { padding: 10px 12px; border-radius: 3px; font-size: 13px; cursor: pointer; color: #666; }
+    .nav-item.active { background: #e3f2fd; color: #2563eb; font-weight: 600; }
+    .nav-item:hover { background: #f0f0f0; }
+    
+    .header { background: white; border-bottom: 1px solid #e0e0e0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .header-title { font-size: 18px; font-weight: 600; }
+    .header-right { display: flex; gap: 16px; align-items: center; }
+    .user-info { text-align: right; font-size: 12px; }
+    .user-name { font-weight: 600; }
+    
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+    
+    .card { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 12px; text-align: left; font-size: 11px; font-weight: 600; background: #f9f9f9; border-bottom: 1px solid #e0e0e0; }
+    td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+    tr:hover { background: #f9f9f9; }
+    
+    .btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-sm { padding: 6px 10px; font-size: 11px; }
+    .btn-danger { background: #d32f2f; color: white; border-color: #d32f2f; }
+    
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+    .badge-green { background: #e6f9f0; color: #047857; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+    .form-input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; }
+    .form-input:focus { outline: none; border-color: #2563eb; }
+    
+    .drawer-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 999; }
+    .drawer { position: fixed; top: 0; right: 0; width: 420px; height: 100vh; background: white; border-left: 1px solid #e0e0e0; z-index: 1000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s; }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header { padding: 20px; border-bottom: 1px solid #e0e0e0; }
+    .drawer-title { font-size: 16px; font-weight: 600; }
+    .drawer-close { position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 20px; cursor: pointer; }
+    .drawer-content { flex: 1; overflow-y: auto; padding: 20px; }
+    .drawer-footer { padding: 20px; border-top: 1px solid #e0e0e0; display: flex; gap: 8px; }
+    
+    .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 4px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; z-index: 2000; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 1999; }
+    .modal-header { padding: 20px; border-bottom: 1px solid #e0e0e0; }
+    .modal-content { padding: 20px; }
+    .modal-footer { padding: 20px; border-top: 1px solid #e0e0e0; display: flex; gap: 8px; justify-content: flex-end; }
+    
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .alert { padding: 12px; border-radius: 3px; margin-bottom: 12px; font-size: 12px; }
+    .alert-info { background: #dbeafe; color: #1e40af; }
+    .alert-success { background: #e6f9f0; color: #047857; }
+    .alert-error { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    // Mock data
+    const mockReadings = [
+      { id: 1, equipment: '2SHR TR1', hour: '10:00', amp: 450.5, mw: 750.2, mvar: 320.1, kv: 138.5, status: 'synced' },
+      { id: 2, equipment: '2SHR TR1', hour: '09:00', amp: 445.2, mw: 748.5, mvar: 318.3, kv: 138.5, status: 'synced' },
+      { id: 3, equipment: '2SHR TR2', hour: '10:00', amp: 380.1, mw: 620.5, mvar: 280.2, kv: 138.5, status: 'pending' }
+    ];
+
+    const mockEquipment = [
+      { id: 1, name: '2SHR TR1', status: 'operating', sla: 98.5, uptime: 99.2 },
+      { id: 2, name: '2SHR TR2', status: 'alert', sla: 92.1, uptime: 88.5 },
+      { id: 3, name: 'CONDC-A1', status: 'operating', sla: 97.8, uptime: 97.5 }
+    ];
+
+    const mockInterruptions = [
+      { id: 1, equipment: '2SHR TR2', tripDate: '2026-05-17', tripTime: '08:30', restoreDate: '2026-05-17', restoreTime: '10:15', duration: '1h 45m', status: 'restored' },
+      { id: 2, equipment: 'CONDC-A2', tripDate: '2026-05-16', tripTime: '14:00', restoreDate: null, restoreTime: null, duration: '24h 30m', status: 'active' }
+    ];
+
+    const mockInspections = [
+      { id: 1, equipment: '2SHR TR1', date: '2026-05-15', inspector: 'John Doe', findings: 'Oil level normal', status: 'completed' },
+      { id: 2, equipment: '2SHR TR3', date: '2026-05-17', inspector: 'Jane Smith', findings: 'Winding temp 65°C', status: 'in-progress' }
+    ];
+
+    const mockSLA = [
+      { id: 1, equipment: '2SHR TR1', forecastPct: 95.0, actualPct: 98.5, variance: 3.5, status: 'on-target' },
+      { id: 2, equipment: '2SHR TR2', forecastPct: 95.0, actualPct: 92.1, variance: -2.9, status: 'warning' },
+      { id: 3, equipment: 'CONDC-A1', forecastPct: 95.0, actualPct: 97.8, variance: 2.8, status: 'on-target' }
+    ];
+
+    // ===== SIDEBAR =====
+    function Sidebar({ currentPage, onPageChange, role, onRoleChange }) {
+      return (
+        <div className="sidebar">
+          <div className="sidebar-logo">NISO</div>
+          
+          <div className="user-context">
+            <div className="context-label">Role</div>
+            <div className="context-value">{role}</div>
+            <div className="context-label" style={{ marginTop: '8px' }}>Station</div>
+            <div className="context-value">AKANGBA</div>
+          </div>
+
+          <div className="role-switcher">
+            <span className="role-label">Switch Role</span>
+            <div className="role-buttons">
+              {['Operator', 'Supervisor', 'Station Admin', 'Regional Admin', 'HQ Admin'].map(r => (
+                <button
+                  key={r}
+                  className={`role-btn ${role === r ? 'active' : ''}`}
+                  onClick={() => onRoleChange(r)}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-title">Operations</div>
+            <div className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => onPageChange('dashboard')}>📊 Dashboard</div>
+            <div className={`nav-item ${currentPage === 'readings' ? 'active' : ''}`} onClick={() => onPageChange('readings')}>📝 Readings</div>
+            <div className={`nav-item ${currentPage === 'sla' ? 'active' : ''}`} onClick={() => onPageChange('sla')}>📈 SLA</div>
+            <div className={`nav-item ${currentPage === 'interruptions' ? 'active' : ''}`} onClick={() => onPageChange('interruptions')}>⚡ Interruptions</div>
+            <div className={`nav-item ${currentPage === 'inspections' ? 'active' : ''}`} onClick={() => onPageChange('inspections')}>🔍 Inspections</div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-title">Records</div>
+            <div className={`nav-item ${currentPage === 'reports' ? 'active' : ''}`} onClick={() => onPageChange('reports')}>📄 Reports</div>
+            <div className={`nav-item ${currentPage === 'history' ? 'active' : ''}`} onClick={() => onPageChange('history')}>📋 History</div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-title">Communication</div>
+            <div className={`nav-item ${currentPage === 'messages' ? 'active' : ''}`} onClick={() => onPageChange('messages')}>💬 Messages</div>
+            <div className={`nav-item ${currentPage === 'notifications' ? 'active' : ''}`} onClick={() => onPageChange('notifications')}>🔔 Notifications</div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-title">Knowledge</div>
+            <div className={`nav-item ${currentPage === 'knowledge' ? 'active' : ''}`} onClick={() => onPageChange('knowledge')}>📚 Knowledge Base</div>
+          </div>
+        </div>
+      );
+    }
+
+    // ===== PAGES =====
+    function Dashboard() {
+      return (
+        <div className="content">
+          <h2 style={{ marginBottom: '20px' }}>Dashboard</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+            <div className="card">
+              <div style={{ fontSize: '11px', color: '#999' }}>Avg SLA</div>
+              <div style={{ fontSize: '28px', fontWeight: 700, color: '#2563eb', marginTop: '8px' }}>96.1%</div>
+            </div>
+            <div className="card">
+              <div style={{ fontSize: '11px', color: '#999' }}>Active Equipment</div>
+              <div style={{ fontSize: '28px', fontWeight: 700, color: '#047857', marginTop: '8px' }}>3</div>
+            </div>
+            <div className="card">
+              <div style={{ fontSize: '11px', color: '#999' }}>Readings Today</div>
+              <div style={{ fontSize: '28px', fontWeight: 700, color: '#2563eb', marginTop: '8px' }}>24</div>
+            </div>
+            <div className="card">
+              <div style={{ fontSize: '11px', color: '#999' }}>Active Alerts</div>
+              <div style={{ fontSize: '28px', fontWeight: 700, color: '#d32f2f', marginTop: '8px' }}>1</div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-title">Equipment Status</div>
+            <table>
+              <thead><tr><th>Equipment</th><th>Status</th><th>SLA</th><th>Uptime</th></tr></thead>
+              <tbody>
+                {mockEquipment.map(eq => (
+                  <tr key={eq.id}>
+                    <td style={{ fontWeight: 600 }}>{eq.name}</td>
+                    <td><span className={`badge ${eq.status === 'operating' ? 'badge-green' : 'badge-red'}`}>{eq.status}</span></td>
+                    <td>{eq.sla}%</td>
+                    <td>{eq.uptime}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    function ReadingsPage({ canEdit }) {
+      const [showForm, setShowForm] = useState(false);
+      const [newReading, setNewReading] = useState({ equipment: '2SHR TR1', amp: '', mw: '', mvar: '', kv: '' });
+
+      const handleAdd = () => {
+        if (newReading.amp && newReading.mw) {
+          setShowForm(false);
+          setNewReading({ equipment: '2SHR TR1', amp: '', mw: '', mvar: '', kv: '' });
+        }
+      };
+
+      return (
+        <div className="content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Readings</h2>
+            {canEdit && <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ New Reading</button>}
+          </div>
+          <div className="card">
+            <table>
+              <thead><tr><th>Equipment</th><th>Hour</th><th>AMP</th><th>MW</th><th>MVAR</th><th>KV</th><th>Status</th></tr></thead>
+              <tbody>
+                {mockReadings.map(r => (
+                  <tr key={r.id}>
+                    <td>{r.equipment}</td>
+                    <td>{r.hour}</td>
+                    <td>{r.amp}</td>
+                    <td>{r.mw}</td>
+                    <td>{r.mvar}</td>
+                    <td>{r.kv}</td>
+                    <td><span className={`badge ${r.status === 'synced' ? 'badge-green' : 'badge-blue'}`}>{r.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {showForm && (
+            <div className="drawer-overlay" onClick={() => setShowForm(false)}>
+              <div className="drawer open" onClick={e => e.stopPropagation()}>
+                <div className="drawer-header">
+                  <button className="drawer-close" onClick={() => setShowForm(false)}>×</button>
+                  <div className="drawer-title">New Reading</div>
+                </div>
+                <div className="drawer-content">
+                  <div className="form-group">
+                    <label className="form-label">Equipment</label>
+                    <select className="form-input" value={newReading.equipment} onChange={e => setNewReading({...newReading, equipment: e.target.value})}>
+                      {mockEquipment.map(eq => <option key={eq.id} value={eq.name}>{eq.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Amperage (AMP) *</label>
+                    <input className="form-input" type="number" value={newReading.amp} onChange={e => setNewReading({...newReading, amp: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">MW *</label>
+                    <input className="form-input" type="number" value={newReading.mw} onChange={e => setNewReading({...newReading, mw: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">MVAR</label>
+                    <input className="form-input" type="number" value={newReading.mvar} onChange={e => setNewReading({...newReading, mvar: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">KV</label>
+                    <input className="form-input" type="number" value={newReading.kv} onChange={e => setNewReading({...newReading, kv: e.target.value})} />
+                  </div>
+                </div>
+                <div className="drawer-footer">
+                  <button className="btn" onClick={() => setShowForm(false)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleAdd}>Save Reading</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function SLAPage({ canEdit }) {
+      const [showForm, setShowForm] = useState(false);
+      return (
+        <div className="content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>SLA Tracking</h2>
+            {canEdit && <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ New SLA Entry</button>}
+          </div>
+          <div className="card">
+            <table>
+              <thead><tr><th>Equipment</th><th>Forecast %</th><th>Actual %</th><th>Variance</th><th>Status</th></tr></thead>
+              <tbody>
+                {mockSLA.map(sla => (
+                  <tr key={sla.id}>
+                    <td style={{ fontWeight: 600 }}>{sla.equipment}</td>
+                    <td>{sla.forecastPct}%</td>
+                    <td>{sla.actualPct}%</td>
+                    <td style={{ color: sla.variance > 0 ? '#047857' : '#d32f2f' }}>{sla.variance > 0 ? '+' : ''}{sla.variance}%</td>
+                    <td><span className={`badge ${sla.status === 'on-target' ? 'badge-green' : 'badge-red'}`}>{sla.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    function InterruptionsPage({ canEdit }) {
+      const [showForm, setShowForm] = useState(false);
+      return (
+        <div className="content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Interruptions</h2>
+            {canEdit && <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ New Interruption</button>}
+          </div>
+          <div className="card">
+            <table>
+              <thead><tr><th>Equipment</th><th>Trip Date/Time</th><th>Restore Date/Time</th><th>Duration</th><th>Status</th></tr></thead>
+              <tbody>
+                {mockInterruptions.map(int => (
+                  <tr key={int.id}>
+                    <td style={{ fontWeight: 600 }}>{int.equipment}</td>
+                    <td>{int.tripDate} {int.tripTime}</td>
+                    <td>{int.restoreDate ? `${int.restoreDate} ${int.restoreTime}` : 'Pending'}</td>
+                    <td>{int.duration}</td>
+                    <td><span className={`badge ${int.status === 'restored' ? 'badge-green' : 'badge-red'}`}>{int.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    function InspectionsPage({ canEdit }) {
+      const [showForm, setShowForm] = useState(false);
+      return (
+        <div className="content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Inspections</h2>
+            {canEdit && <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ New Inspection</button>}
+          </div>
+          <div className="card">
+            <table>
+              <thead><tr><th>Equipment</th><th>Date</th><th>Inspector</th><th>Findings</th><th>Status</th></tr></thead>
+              <tbody>
+                {mockInspections.map(insp => (
+                  <tr key={insp.id}>
+                    <td style={{ fontWeight: 600 }}>{insp.equipment}</td>
+                    <td>{insp.date}</td>
+                    <td>{insp.inspector}</td>
+                    <td>{insp.findings}</td>
+                    <td><span className={`badge ${insp.status === 'completed' ? 'badge-green' : 'badge-blue'}`}>{insp.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    function ReportsPage() {
+      return (
+        <div className="content">
+          <h2 style={{ marginBottom: '20px' }}>Reports</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div className="card" style={{ cursor: 'pointer' }}>
+              <div className="card-title">Daily SLA Report</div>
+              <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>SLA performance summary</div>
+              <button className="btn btn-primary" style={{ width: '100%', marginTop: '12px' }}>Generate</button>
+            </div>
+            <div className="card" style={{ cursor: 'pointer' }}>
+              <div className="card-title">Equipment Status</div>
+              <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>Current operational status</div>
+              <button className="btn btn-primary" style={{ width: '100%', marginTop: '12px' }}>Generate</button>
+            </div>
+            <div className="card" style={{ cursor: 'pointer' }}>
+              <div className="card-title">Monthly Summary</div>
+              <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>Month-to-date analytics</div>
+              <button className="btn btn-primary" style={{ width: '100%', marginTop: '12px' }}>Generate</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function HistoryPage() {
+      return (
+        <div className="content">
+          <h2 style={{ marginBottom: '20px' }}>History</h2>
+          <div className="alert alert-info">Historical data view (searchable, filterable)</div>
+          <div className="empty-state">
+            <div style={{ fontSize: '14px' }}>Historical records interface coming soon</div>
+          </div>
+        </div>
+      );
+    }
+
+    function MessagesPage() {
+      return (
+        <div className="content">
+          <h2 style={{ marginBottom: '20px' }}>Messages</h2>
+          <div className="alert alert-info">No new messages</div>
+        </div>
+      );
+    }
+
+    function NotificationsPage() {
+      return (
+        <div className="content">
+          <h2 style={{ marginBottom: '20px' }}>Notifications</h2>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>SLA Alert: 2SHR TR2</div>
+                <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>SLA below 95% target</div>
+              </div>
+              <span className="badge badge-red">Critical</span>
+            </div>
+            <button className="btn btn-sm">Acknowledge</button>
+          </div>
+        </div>
+      );
+    }
+
+    function KnowledgePage() {
+      return (
+        <div className="content">
+          <h2 style={{ marginBottom: '20px' }}>Knowledge Base</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+            <div className="card">
+              <div className="card-title">SLA Calculation Guide</div>
+              <div style={{ fontSize: '12px', color: '#999' }}>How SLA is calculated and monitored</div>
+            </div>
+            <div className="card">
+              <div className="card-title">Equipment Maintenance</div>
+              <div style={{ fontSize: '12px', color: '#999' }}>Preventive maintenance schedules</div>
+            </div>
+            <div className="card">
+              <div className="card-title">Emergency Procedures</div>
+              <div style={{ fontSize: '12px', color: '#999' }}>Response protocols for outages</div>
+            </div>
+            <div className="card">
+              <div className="card-title">System Documentation</div>
+              <div style={{ fontSize: '12px', color: '#999' }}>Technical specifications</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ===== MAIN APP =====
+    function App() {
+      const [currentPage, setCurrentPage] = useState('dashboard');
+      const [role, setRole] = useState('Operator');
+
+      const canEdit = ['Operator', 'Supervisor', 'Station Admin'].includes(role);
+
+      const pageTitle = {
+        dashboard: '📊 Dashboard',
+        readings: '📝 Readings',
+        sla: '📈 SLA Tracking',
+        interruptions: '⚡ Interruptions',
+        inspections: '🔍 Inspections',
+        reports: '📄 Reports',
+        history: '📋 History',
+        messages: '💬 Messages',
+        notifications: '🔔 Notifications',
+        knowledge: '📚 Knowledge Base'
+      };
+
+      return (
+        <div className="app">
+          <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} role={role} onRoleChange={setRole} />
+          <div className="main">
+            <div className="header">
+              <div className="header-title">{pageTitle[currentPage]}</div>
+              <div className="header-right">
+                <div className="user-info">
+                  <div className="user-name">Test User</div>
+                  <div className="user-role">{role}</div>
+                </div>
+              </div>
+            </div>
+
+            {currentPage === 'dashboard' && <Dashboard />}
+            {currentPage === 'readings' && <ReadingsPage canEdit={canEdit} />}
+            {currentPage === 'sla' && <SLAPage canEdit={canEdit} />}
+            {currentPage === 'interruptions' && <InterruptionsPage canEdit={canEdit} />}
+            {currentPage === 'inspections' && <InspectionsPage canEdit={canEdit} />}
+            {currentPage === 'reports' && <ReportsPage />}
+            {currentPage === 'history' && <HistoryPage />}
+            {currentPage === 'messages' && <MessagesPage />}
+            {currentPage === 'notifications' && <NotificationsPage />}
+            {currentPage === 'knowledge' && <KnowledgePage />}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

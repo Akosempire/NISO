@@ -1,0 +1,303 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// USERS & ROLES
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  fullName      String?
+  phoneNumber   String?
+  role          Role      @relation(fields: [roleId], references: [id])
+  roleId        String
+  region        Region?   @relation(fields: [regionId], references: [id])
+  regionId      String?
+  station       Station?  @relation(fields: [stationId], references: [id])
+  stationId     String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  lastLogin     DateTime?
+
+  readings      Reading[]
+  slaEntries    SLAEntry[]
+  interruptions Interruption[]
+  inspections   Inspection[]
+  auditLogs     AuditLog[]
+  sharingGrants SharingGrant[] @relation("grantor")
+  sharedWith    SharingGrant[] @relation("grantee")
+  reports       Report[]
+
+  @@index([roleId])
+  @@index([stationId])
+  @@index([regionId])
+}
+
+model Role {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  permissions Json   // Store as JSONB: { canRead: [...], canCreate: [...], etc. }
+  users       User[]
+
+  @@index([name])
+}
+
+// REGIONAL HIERARCHY
+model Region {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  code            String    @unique
+  headquartersId  String?
+  createdAt       DateTime  @default(now())
+  users           User[]
+  stations        Station[]
+
+  @@index([headquartersId])
+}
+
+model Station {
+  id          String   @id @default(cuid())
+  name        String
+  region      Region   @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  regionId    String
+  location    String?
+  createdAt   DateTime @default(now())
+
+  users        User[]
+  equipment    Equipment[]
+  readings     Reading[]
+  slaEntries   SLAEntry[]
+  inspections  Inspection[]
+  templates    Template[]
+  auditLogs    AuditLog[]
+
+  @@unique([name, regionId])
+  @@index([regionId])
+}
+
+// EQUIPMENT
+model Equipment {
+  id           String      @id @default(cuid())
+  name         String
+  station      Station     @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  stationId    String
+  type         String      // '330kV', '132kV', 'Transformer', 'Reactor', 'Feeder'
+  template     Template?   @relation(fields: [templateId], references: [id])
+  templateId   String?
+  scadaTag     String?     // Future SCADA integration
+  createdAt    DateTime    @default(now())
+
+  readings      Reading[]
+  interruptions Interruption[]
+  inspections   Inspection[]
+  parameters    Parameter[]
+
+  @@unique([name, stationId])
+  @@index([stationId])
+  @@index([templateId])
+}
+
+model Parameter {
+  id          String    @id @default(cuid())
+  name        String
+  unit        String?   // 'A', 'MW', 'MVAR', 'kV'
+  type        String    // 'number', 'code', 'text'
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  equipmentId String
+  createdAt   DateTime  @default(now())
+
+  @@index([equipmentId])
+}
+
+// OPERATIONAL DATA
+model Reading {
+  id             String    @id @default(cuid())
+  equipment      Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  equipmentId    String
+  station        Station   @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  stationId      String
+  date           DateTime
+  hour           Int       // 0-23
+  rawInput       String?   // As entered by operator
+  numericValue   Decimal?  @db.Decimal(10, 2)
+  codeReference  String?   // Matched code (e.g., 'ON', 'OFF', 'O/S')
+  valueType      String    // 'number', 'code', 'text'
+  createdBy      User      @relation(fields: [createdById], references: [id])
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedBy      String?
+  updatedAt      DateTime?
+  sealedAt       DateTime? // null = editable; filled = immutable
+  formula        Formula?  @relation(fields: [formulaId], references: [id])
+  formulaId      String?
+
+  @@unique([equipmentId, date, hour])
+  @@index([equipmentId, date])
+  @@index([stationId, date])
+  @@index([createdById])
+  @@index([sealedAt])
+}
+
+model SLAEntry {
+  id               String    @id @default(cuid())
+  station          Station   @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  stationId        String
+  date             DateTime
+  hour             Int
+  forecastMw       Decimal   @db.Decimal(10, 2)
+  meterReadingKwh  Decimal?  @db.Decimal(15, 2)
+  actualMw         Decimal?  @db.Decimal(10, 2)
+  differenceMw     Decimal?  @db.Decimal(10, 2) // AUTO: actualMw - forecastMw
+  remarks          String?
+  createdBy        User      @relation(fields: [createdById], references: [id])
+  createdById      String
+  createdAt        DateTime  @default(now())
+  approvedBy       String?
+  approvedAt       DateTime?
+  sealedAt         DateTime?
+
+  @@unique([stationId, date, hour])
+  @@index([stationId, date])
+  @@index([approvedAt])
+}
+
+model Interruption {
+  id              String    @id @default(cuid())
+  equipment       Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  equipmentId     String
+  tripTime        DateTime
+  restorationTime DateTime?
+  causeCode       String    // 'RELAY_FLT', 'CB_FLT', 'TRIP_MANUAL', 'MNT', etc.
+  durationSeconds Int?      // AUTO: (restorationTime - tripTime).seconds
+  notes           String?
+  status          String    @default("Active") // 'Active', 'Restored', 'Cleared'
+  createdBy       User      @relation(fields: [createdById], references: [id])
+  createdById     String
+  createdAt       DateTime  @default(now())
+  resolvedBy      String?
+  resolvedAt      DateTime?
+
+  @@index([equipmentId, tripTime])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Inspection {
+  id               String    @id @default(cuid())
+  equipment        Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  equipmentId      String
+  inspectionDate   DateTime
+  typeId           String    // 'routine', 'maintenance', 'post_fault', 'annual'
+  inspector        User      @relation(fields: [inspectorId], references: [id])
+  inspectorId      String
+  findings         Json?     // JSONB: structured or free-form
+  photos           Json?     // Array of URLs
+  createdAt        DateTime  @default(now())
+  approvedBy       String?
+  approvedAt       DateTime?
+
+  @@index([equipmentId, inspectionDate])
+  @@index([inspectorId])
+  @@index([approvedAt])
+}
+
+// TEMPLATES & FORMULAS
+model Template {
+  id        String      @id @default(cuid())
+  name      String
+  station   Station     @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  stationId String
+  fields    Json        // Array of field definitions: { id, label, type, unit, required }
+  createdBy String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime?
+
+  equipment Equipment[]
+  formulas  Formula[]
+
+  @@unique([name, stationId])
+}
+
+model Formula {
+  id          String    @id @default(cuid())
+  name        String
+  template    Template  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateId  String
+  expression  String    // e.g., "=(field1 * field2)/1000"
+  version     Int       // Auto-increment
+  activatedAt DateTime?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  isActive    Boolean   @default(false)
+
+  readings Reading[]
+
+  @@index([templateId, isActive])
+  @@index([activatedAt])
+}
+
+// REPORTING
+model Report {
+  id           String    @id @default(cuid())
+  name         String
+  type         String    // 'daily_readings', 'sla', 'interruption', 'inspection', 'monthly', 'regional'
+  generatedBy  User      @relation(fields: [generatedById], references: [id])
+  generatedById String
+  generatedAt  DateTime  @default(now())
+  dateRangeStart DateTime
+  dateRangeEnd DateTime
+  filters      Json?     // Query filters (station_id, equipment_id, etc.)
+  dataUrl      String?   // Path to generated file
+  expiresAt    DateTime?
+
+  @@index([generatedAt])
+  @@index([expiresAt])
+}
+
+// AUDIT & COMPLIANCE
+model AuditLog {
+  id            String    @id @default(cuid())
+  user          User      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId        String?
+  action        String    // 'create', 'update', 'delete', 'export', 'approve', 'seal'
+  resourceType  String    // 'reading', 'sla', 'interruption', 'inspection', 'month'
+  resourceId    String?
+  oldValue      Json?     // Before edit
+  newValue      Json?     // After edit
+  ipAddress     String?
+  userAgent     String?
+  station       Station   @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  stationId     String
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([stationId, createdAt])
+  @@index([createdAt])
+}
+
+// SHARING & COLLABORATION
+model SharingGrant {
+  id           String    @id @default(cuid())
+  grantor      User      @relation("grantor", fields: [grantorId], references: [id], onDelete: Cascade)
+  grantorId    String
+  grantee      User?     @relation("grantee", fields: [granteeId], references: [id], onDelete: SetNull)
+  granteeId    String?
+  granteeEmail String?   // For external users
+  resourceType String    // 'station', 'equipment', 'readings', 'reports'
+  resourceId   String?
+  scope        Json      // { dateRange: {start, end}, parameters: [...], type: '...' }
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  revokedAt    DateTime?
+
+  @@index([granteeId, createdAt])
+  @@index([grantorId, createdAt])
+}

@@ -1,0 +1,206 @@
+.sidebar {
+  width: 240px;
+  background: var(--color-teal-900, #11191a);
+  color: var(--color-teal-100, #d9e6e7);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--color-teal-800, #1b2e30);
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+.sidebar-mobile-close {
+  display: none;
+}
+
+.sidebar-header {
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--color-teal-800, #1b2e30);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  gap: 4px;
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+}
+
+.nav-group + .nav-group {
+  border-top: 1px solid var(--color-teal-800, #1b2e30);
+  margin-top: 4px;
+}
+
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-teal-300, #8db4b7);
+  padding: 8px 16px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: transparent;
+  color: var(--color-teal-100, #d9e6e7);
+  border: none;
+  border-left: 3px solid transparent;
+  padding: 9px 16px 9px 13px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 150ms;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: white;
+}
+
+.nav-item.active {
+  background: var(--color-teal-700, #264244);
+  color: white;
+  border-left-color: var(--color-sage-400, #8fbba0);
+  font-weight: 600;
+}
+
+.nav-item-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-tag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--color-teal-800, #1b2e30);
+  color: var(--color-teal-300, #8db4b7);
+  white-space: nowrap;
+}
+
+.nav-item.active .nav-tag {
+  background: var(--color-teal-600, #325759);
+  color: var(--color-teal-100, #d9e6e7);
+}
+
+.sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--color-teal-800, #1b2e30);
+}
+
+.user-block {
+  margin-bottom: 12px;
+}
+
+.user-block .user-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: white;
+  margin: 0 0 2px 0;
+}
+
+.user-block .user-email,
+.user-block .user-station {
+  font-size: 11px;
+  color: var(--color-teal-300, #8db4b7);
+  margin: 1px 0;
+}
+
+.btn-logout {
+  width: 100%;
+  background: transparent;
+  color: var(--color-teal-100, #d9e6e7);
+  border: 1px solid var(--color-teal-700, #264244);
+  border-radius: var(--border-radius-sm, 4px);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.btn-logout:hover {
+  background: var(--color-status-error, #dc2626);
+  border-color: var(--color-status-error, #dc2626);
+  color: white;
+}
+
+/* ── Mobile / tablet: slide-in drawer ───────────────────────────────── */
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: var(--z-modal, 1050);
+    transform: translateX(-100%);
+    transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 25, 26, 0.45);
+    z-index: var(--z-modal-backdrop, 1040);
+    animation: backdrop-fade-in 200ms ease-out;
+  }
+
+  .sidebar-mobile-close {
+    display: flex;
+    position: absolute;
+    top: 16px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    color: var(--color-teal-100);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: var(--border-radius-sm);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar-mobile-close:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+@keyframes backdrop-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

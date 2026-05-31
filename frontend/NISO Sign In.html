@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NISO — Sign In</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    
+    .login-container { width: 100%; max-width: 420px; }
+    
+    .login-card {
+      background: white;
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    
+    .logo { font-size: 32px; font-weight: 700; color: #2563eb; margin-bottom: 8px; }
+    .subtitle { font-size: 13px; color: #666; margin-bottom: 32px; }
+    
+    .scope-selector { margin-bottom: 24px; }
+    .scope-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; margin-bottom: 12px; display: block; }
+    
+    .scope-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+    .scope-tab {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #666;
+    }
+    .scope-tab.active {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+    .scope-tab:hover { border-color: #2563eb; }
+    
+    .station-selector {
+      display: none;
+      margin-bottom: 20px;
+    }
+    .station-selector.show { display: block; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #333; }
+    .form-input, .form-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+    
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .login-btn:hover { background: #1d4ed8; }
+    .login-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+    
+    .alert {
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+    .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .alert-info { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    
+    .demo-info {
+      margin-top: 20px;
+      padding: 12px;
+      background: #f0f9ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #1e40af;
+    }
+    .demo-info strong { display: block; margin-bottom: 8px; }
+    .demo-creds { font-family: monospace; font-size: 11px; }
+    
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: #ccc;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #ddd;
+    }
+    .divider span { margin: 0 12px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Supabase Client
+    const { createClient } = window.supabase;
+    const supabase = createClient(
+      'https://YOUR_SUPABASE_URL.supabase.co',
+      'YOUR_SUPABASE_ANON_KEY'
+    );
+
+    /**
+     * Sign In Component
+     * Supports two modes:
+     * 1. Station Mode: User signs in with their station (Operator, Supervisor, Station Admin)
+     * 2. Admin Mode: User signs in globally (HQ Admin, Regional Admin, ICT Admin)
+     */
+    function SignIn({ onSuccess }) {
+      const [scope, setScope] = useState('station'); // 'station' or 'admin'
+      const [email, setEmail] = useState('operator@akangba.niso');
+      const [password, setPassword] = useState('password123');
+      const [station, setStation] = useState('1'); // Default AKANGBA
+      const [stations, setStations] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState('');
+
+      useEffect(() => {
+        loadStations();
+      }, []);
+
+      const loadStations = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('stations')
+            .select('id, name, region')
+            .order('name');
+
+          if (error) throw error;
+          setStations(data || []);
+        } catch (err) {
+          console.error('Failed to load stations:', err);
+        }
+      };
+
+      const handleSignIn = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+          // Sign in with Supabase
+          const { data, error: authError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+
+          if (authError) throw authError;
+
+          // Fetch user profile
+          const { data: profile, error: profileError } = await supabase
+            .from('users')
+            .select('id, email, first_name, last_name, role, station_id, region_id')
+            .eq('auth_id', data.user.id)
+            .single();
+
+          if (profileError) throw profileError;
+
+          // Determine scope based on role
+          const userScope = determineScope(profile, scope, parseInt(station));
+
+          // Pass user info to parent
+          onSuccess({
+            user: data.user,
+            profile,
+            scope: userScope
+          });
+        } catch (err) {
+          setError(err.message || 'Sign in failed');
+        }
+
+        setLoading(false);
+      };
+
+      const determineScope = (profile, selectedScope, selectedStation) => {
+        const stationScopedRoles = ['Operator', 'Supervisor', 'Station Admin'];
+        const regionalScopedRoles = ['Regional Admin'];
+        const globalRoles = ['HQ Admin', 'ICT Admin'];
+
+        if (selectedScope === 'station' && stationScopedRoles.includes(profile.role)) {
+          return {
+            type: 'station',
+            stationId: selectedStation,
+            canEdit: profile.role !== 'Operator',
+            canApprove: profile.role === 'Supervisor' || profile.role === 'Station Admin'
+          };
+        }
+
+        if (selectedScope === 'admin') {
+          if (regionalScopedRoles.includes(profile.role)) {
+            return {
+              type: 'region',
+              regionId: profile.region_id,
+              canEdit: true,
+              canApprove: true
+            };
+          }
+
+          if (globalRoles.includes(profile.role)) {
+            return {
+              type: 'global',
+              canEdit: true,
+              canApprove: true,
+              canManageUsers: profile.role === 'HQ Admin'
+            };
+          }
+        }
+
+        throw new Error('Your role does not support this access level');
+      };
+
+      return (
+        <div className="login-container">
+          <div className="login-card">
+            <div className="logo">NISO</div>
+            <div className="subtitle">Operational Platform</div>
+
+            {error && <div className="alert alert-error">{error}</div>}
+
+            {/* Scope Selector */}
+            <div className="scope-selector">
+              <label className="scope-label">Sign in as</label>
+              <div className="scope-tabs">
+                <button
+                  className={`scope-tab ${scope === 'station' ? 'active' : ''}`}
+                  onClick={() => setScope('station')}
+                  disabled={loading}
+                >
+                  Station User
+                </button>
+                <button
+                  className={`scope-tab ${scope === 'admin' ? 'active' : ''}`}
+                  onClick={() => setScope('admin')}
+                  disabled={loading}
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSignIn}>
+              {/* Station Selector (only for station scope) */}
+              {scope === 'station' && (
+                <div className="station-selector show">
+                  <label className="form-label">Station</label>
+                  <select
+                    className="form-select"
+                    value={station}
+                    onChange={(e) => setStation(e.target.value)}
+                    disabled={loading}
+                  >
+                    <option value="">Select your station</option>
+                    {stations.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.region})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input
+                  className="form-input"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="operator@station.niso"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <input
+                  className="form-input"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="login-btn"
+                disabled={loading || (scope === 'station' && !station)}
+              >
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+
+            <div className="demo-info">
+              <strong>Demo Credentials:</strong>
+              <div className="demo-creds">
+                <div><strong>Station Operator:</strong></div>
+                <div>operator@akangba.niso / password123</div>
+                <br/>
+                <div><strong>Station Supervisor:</strong></div>
+                <div>supervisor@akangba.niso / password123</div>
+                <br/>
+                <div><strong>Global Admin:</strong></div>
+                <div>admin@niso.global / password123</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Main App
+    function App() {
+      const [user, setUser] = useState(null);
+
+      const handleSignInSuccess = (userData) => {
+        setUser(userData);
+        // Store in localStorage for persistence
+        localStorage.setItem('niso_user', JSON.stringify({
+          user: userData.user,
+          profile: userData.profile,
+          scope: userData.scope
+        }));
+      };
+
+      return (
+        <div>
+          {!user ? (
+            <SignIn onSuccess={handleSignInSuccess} />
+          ) : (
+            <div style={{ padding: '20px', color: 'white' }}>
+              <h1>Welcome, {user.profile.first_name}!</h1>
+              <p>Scope: {user.scope.type}</p>
+              <button onClick={() => { setUser(null); localStorage.removeItem('niso_user'); }}>
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

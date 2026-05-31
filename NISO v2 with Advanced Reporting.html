@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NISO v2 — Operational System + Dashboards</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+    
+    .app-wrapper { display: flex; min-height: 100vh; }
+    
+    /* SIDEBAR */
+    .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #e0e0e0; padding: 24px 0; overflow-y: auto; }
+    .sidebar-logo { padding: 0 20px 24px; font-size: 18px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; }
+    .user-context { padding: 12px 16px; background: #f0f0f0; margin: 0 12px 16px; border-radius: 4px; font-size: 11px; }
+    .context-label { font-weight: 600; color: #666; }
+    .context-value { color: #2563eb; font-weight: 600; margin-top: 2px; }
+    .role-switcher { padding: 0 16px; margin-bottom: 20px; }
+    .role-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; margin-bottom: 8px; display: block; }
+    .role-buttons { display: flex; flex-direction: column; gap: 4px; }
+    .role-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .role-btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .role-btn.active { background: #2563eb; color: white; border-color: #2563eb; font-weight: 600; }
+    .nav-section { padding: 0 12px; margin-bottom: 16px; }
+    .nav-section-title { padding: 0 8px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; }
+    .nav-item { padding: 10px 12px; border-radius: 3px; font-size: 13px; cursor: pointer; transition: all 0.2s; color: #666; }
+    .nav-item:hover { background: #f0f0f0; }
+    .nav-item.active { background: #e3f2fd; color: #2563eb; font-weight: 600; }
+    
+    /* TOP BAR */
+    .topbar { background: white; border-bottom: 1px solid #e0e0e0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar-left { display: flex; align-items: center; gap: 20px; }
+    .topbar-title { font-size: 18px; font-weight: 600; }
+    .topbar-right { display: flex; gap: 16px; align-items: center; }
+    .user-info { text-align: right; font-size: 12px; }
+    .user-name { font-weight: 600; }
+    .user-role { color: #999; font-size: 11px; }
+    
+    /* MAIN CONTENT */
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .content-area { flex: 1; overflow-y: auto; padding: 24px; background: #f5f5f5; }
+    
+    /* DASHBOARD GRID */
+    .dashboard-controls { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+    .control-group { display: flex; flex-direction: column; gap: 4px; }
+    .control-label { font-size: 11px; font-weight: 600; color: #666; }
+    .control-input { padding: 6px 8px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; }
+    
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .kpi-card { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; border-top: 4px solid #2563eb; }
+    .kpi-card.alert-red { border-top-color: #d32f2f; }
+    .kpi-card.alert-amber { border-top-color: #f59e0b; }
+    .kpi-card.alert-green { border-top-color: #047857; }
+    .kpi-label { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; }
+    .kpi-value { font-size: 28px; font-weight: 700; color: #2563eb; }
+    .kpi-card.alert-red .kpi-value { color: #d32f2f; }
+    .kpi-card.alert-amber .kpi-value { color: #f59e0b; }
+    .kpi-card.alert-green .kpi-value { color: #047857; }
+    .kpi-meta { font-size: 11px; color: #999; margin-top: 8px; }
+    
+    /* CHARTS */
+    .chart-section { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+    .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #333; }
+    .chart-container { position: relative; height: 300px; }
+    svg { width: 100%; height: 100%; }
+    
+    /* COMPARISON TABLE */
+    .comparison-table { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+    .comparison-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f9f9f9; }
+    th { padding: 12px; text-align: left; font-size: 11px; font-weight: 600; color: #666; border-bottom: 1px solid #e0e0e0; }
+    td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+    tr:hover { background: #fafafa; }
+    
+    /* BUTTONS */
+    .btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-primary:hover { background: #1e53d6; }
+    
+    /* BADGES */
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+    .badge-green { background: #e6f9f0; color: #047857; }
+    .badge-amber { background: #fffbeb; color: #b45309; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    
+    /* MODAL */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 999; display: flex; align-items: center; justify-content: center; }
+    .modal { background: white; border-radius: 4px; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .modal-header { padding: 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+    .modal-content { padding: 20px; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Mock data generator with realistic patterns
+    function generateMockData(timeRange) {
+      const now = new Date();
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const data = [];
+      
+      for (let i = days; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        
+        // Realistic SLA patterns
+        const baseTarget = 95 + Math.random() * 3;
+        const actual = baseTarget - (Math.random() * 5); // Some variance
+        const variance = actual - baseTarget;
+        
+        data.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          forecast: Math.round(baseTarget * 10) / 10,
+          actual: Math.round(actual * 10) / 10,
+          variance: Math.round(variance * 10) / 10
+        });
+      }
+      return data;
+    }
+
+    function generateEquipmentData() {
+      return [
+        { equipment: '2SHR TR1', status: 'Operating', uptime: 99.2, sla: 98.5, downtime: 1.3, costPerHour: 2450, lastMaintenance: '2d ago' },
+        { equipment: '2SHR TR2', status: 'Alert', uptime: 91.8, sla: 94.2, downtime: 8.2, costPerHour: 2450, lastMaintenance: '45d ago' },
+        { equipment: '2SHR TR3', status: 'Operating', uptime: 97.5, sla: 96.8, downtime: 2.5, costPerHour: 2450, lastMaintenance: '12d ago' },
+        { equipment: 'CONDC-A1', status: 'Operating', uptime: 98.1, sla: 97.5, downtime: 1.9, costPerHour: 1850, lastMaintenance: '8d ago' },
+        { equipment: 'CONDC-A2', status: 'Critical', uptime: 82.3, sla: 88.5, downtime: 17.7, costPerHour: 1850, lastMaintenance: '120d ago' }
+      ];
+    }
+
+    function SimpleLineChart({ data, height = 250 }) {
+      const maxValue = Math.max(...data.map(d => Math.max(d.forecast, d.actual)), 100);
+      const width = 800;
+      const padding = 40;
+      const chartWidth = width - 2 * padding;
+      const chartHeight = height - 2 * padding;
+      
+      const pointSpacing = chartWidth / (data.length - 1 || 1);
+      
+      // Forecast line
+      const forecastPoints = data.map((d, i) => {
+        const x = padding + i * pointSpacing;
+        const y = padding + chartHeight - (d.forecast / maxValue) * chartHeight;
+        return `${x},${y}`;
+      }).join(' ');
+      
+      // Actual line
+      const actualPoints = data.map((d, i) => {
+        const x = padding + i * pointSpacing;
+        const y = padding + chartHeight - (d.actual / maxValue) * chartHeight;
+        return `${x},${y}`;
+      }).join(' ');
+      
+      return (
+        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '100%' }}>
+          {/* Grid */}
+          {[0, 1, 2, 3, 4, 5].map(i => (
+            <line key={`grid-${i}`} x1={padding} y1={padding + (chartHeight / 5) * i} x2={width - padding} y2={padding + (chartHeight / 5) * i} stroke="#f0f0f0" strokeWidth="1" />
+          ))}
+          
+          {/* Y-axis */}
+          <line x1={padding} y1={padding} x2={padding} y2={padding + chartHeight} stroke="#e0e0e0" strokeWidth="2" />
+          
+          {/* X-axis */}
+          <line x1={padding} y1={padding + chartHeight} x2={width - padding} y2={padding + chartHeight} stroke="#e0e0e0" strokeWidth="2" />
+          
+          {/* Forecast line (dashed) */}
+          <polyline points={forecastPoints} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="5,5" />
+          
+          {/* Actual line (solid) */}
+          <polyline points={actualPoints} fill="none" stroke="#047857" strokeWidth="2" />
+          
+          {/* Y-axis labels */}
+          {[0, 1, 2, 3, 4, 5].map(i => {
+            const value = Math.round((maxValue / 5) * (5 - i));
+            return (
+              <text key={`label-${i}`} x={padding - 10} y={padding + (chartHeight / 5) * i + 4} textAnchor="end" fontSize="10" fill="#999">
+                {value}
+              </text>
+            );
+          })}
+        </svg>
+      );
+    }
+
+    function Dashboard({ role, scope, timeRange }) {
+      const [data, setData] = useState(generateMockData(timeRange));
+      const [equipmentData, setEquipmentData] = useState(generateEquipmentData());
+      const [selectedMetric, setSelectedMetric] = useState(null);
+      const [favoriteViews, setFavoriteViews] = useState(['Default']);
+      const [showThresholdConfig, setShowThresholdConfig] = useState(false);
+
+      useEffect(() => {
+        setData(generateMockData(timeRange));
+      }, [timeRange]);
+
+      const slaStats = {
+        avgActual: Math.round(data.reduce((sum, d) => sum + d.actual, 0) / data.length * 10) / 10,
+        avgForecast: Math.round(data.reduce((sum, d) => sum + d.forecast, 0) / data.length * 10) / 10,
+        variance: Math.round((data.reduce((sum, d) => sum + d.actual, 0) / data.length - data.reduce((sum, d) => sum + d.forecast, 0) / data.length) * 10) / 10
+      };
+
+      const efficiencyStats = {
+        avgUptime: Math.round(equipmentData.reduce((sum, e) => sum + e.uptime, 0) / equipmentData.length * 10) / 10,
+        totalDowntime: Math.round(equipmentData.reduce((sum, e) => sum + e.downtime, 0) * 10) / 10,
+        totalCost: equipmentData.reduce((sum, e) => sum + e.costPerHour, 0)
+      };
+
+      const getAlertLevel = (value, target = 95) => {
+        if (value >= target) return 'alert-green';
+        if (value >= target - 5) return 'alert-amber';
+        return 'alert-red';
+      };
+
+      const getScopeLabel = () => {
+        const labels = { station: 'Station', region: 'Regional', national: 'National' };
+        return labels[scope] || 'National';
+      };
+
+      return (
+        <div className="content-area">
+          {/* Controls */}
+          <div className="dashboard-controls">
+            <div className="control-group">
+              <label className="control-label">Time Range</label>
+              <select className="control-input" defaultValue="30d">
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+              </select>
+            </div>
+            <div className="control-group">
+              <label className="control-label">Equipment/Station</label>
+              <select className="control-input">
+                <option>All Equipment</option>
+                <option>2SHR TR1</option>
+                <option>2SHR TR2</option>
+                <option>CONDC-A</option>
+              </select>
+            </div>
+            <div className="control-group">
+              <label className="control-label">Export</label>
+              <select className="control-input">
+                <option>PDF</option>
+                <option>Excel</option>
+                <option>CSV</option>
+              </select>
+            </div>
+            <button className="btn btn-primary" onClick={() => setShowThresholdConfig(true)}>⚙️ Alerts</button>
+          </div>
+
+          {/* KPI Cards */}
+          <div className="kpi-grid">
+            <div className={`kpi-card ${getAlertLevel(slaStats.avgActual)}`}>
+              <div className="kpi-label">Avg SLA (Actual)</div>
+              <div className="kpi-value">{slaStats.avgActual}%</div>
+              <div className="kpi-meta">vs {slaStats.avgForecast}% target</div>
+            </div>
+            <div className={`kpi-card ${slaStats.variance >= 0 ? 'alert-green' : 'alert-red'}`}>
+              <div className="kpi-label">SLA Variance</div>
+              <div className="kpi-value">{slaStats.variance > 0 ? '+' : ''}{slaStats.variance}%</div>
+              <div className="kpi-meta">{slaStats.variance > 0 ? 'Above' : 'Below'} forecast</div>
+            </div>
+            <div className={`kpi-card ${getAlertLevel(efficiencyStats.avgUptime)}`}>
+              <div className="kpi-label">Avg Uptime</div>
+              <div className="kpi-value">{efficiencyStats.avgUptime}%</div>
+              <div className="kpi-meta">{equipmentData.length} equipment</div>
+            </div>
+            <div className="kpi-card alert-red">
+              <div className="kpi-label">Total Downtime (hrs)</div>
+              <div className="kpi-value">{efficiencyStats.totalDowntime}</div>
+              <div className="kpi-meta">Last {timeRange === '7d' ? '7' : timeRange === '30d' ? '30' : '90'} days</div>
+            </div>
+          </div>
+
+          {/* SLA Trend Chart */}
+          <div className="chart-section">
+            <div className="chart-title">SLA Performance Trend — Actual vs Forecast</div>
+            <div className="chart-container">
+              <SimpleLineChart data={data} />
+            </div>
+            <div style={{ marginTop: '12px', fontSize: '11px', color: '#999' }}>
+              <span style={{ marginRight: '20px' }}>
+                <span style={{ display: 'inline-block', width: '12px', height: '2px', background: '#047857', marginRight: '4px', verticalAlign: 'middle' }}></span>
+                Actual
+              </span>
+              <span>
+                <span style={{ display: 'inline-block', width: '12px', height: '2px', background: '#2563eb', marginRight: '4px', verticalAlign: 'middle', borderTop: '2px dashed #2563eb' }}></span>
+                Forecast
+              </span>
+            </div>
+          </div>
+
+          {/* Equipment Drill-Down */}
+          <div className="comparison-table">
+            <div className="comparison-title">Equipment Performance Detail — {getScopeLabel()} View</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Equipment</th>
+                  <th>Status</th>
+                  <th>Uptime %</th>
+                  <th>SLA %</th>
+                  <th>Downtime (hrs)</th>
+                  <th>Cost/hr</th>
+                  <th>Last Maintenance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {equipmentData.map(eq => (
+                  <tr key={eq.equipment} style={{ cursor: 'pointer' }} onClick={() => setSelectedMetric(eq)}>
+                    <td style={{ fontWeight: 600 }}>{eq.equipment}</td>
+                    <td><span className={`badge ${eq.status === 'Operating' ? 'badge-green' : eq.status === 'Alert' ? 'badge-amber' : 'badge-red'}`}>{eq.status}</span></td>
+                    <td>{eq.uptime}%</td>
+                    <td>{eq.sla}%</td>
+                    <td>{eq.downtime}</td>
+                    <td>${eq.costPerHour}</td>
+                    <td>{eq.lastMaintenance}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: '12px', fontSize: '11px', color: '#999' }}>Click equipment row to drill down</div>
+          </div>
+
+          {/* Threshold Alert Config Modal */}
+          {showThresholdConfig && (
+            <div className="modal-overlay" onClick={() => setShowThresholdConfig(false)}>
+              <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: 600 }}>Threshold Alerts</div>
+                    <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>Configure when to receive notifications</div>
+                  </div>
+                  <button className="modal-close" onClick={() => setShowThresholdConfig(false)}>×</button>
+                </div>
+                <div className="modal-content">
+                  <div className="form-group" style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>SLA Critical Alert (%)</label>
+                    <input type="number" defaultValue="90" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '3px' }} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>SLA Warning Alert (%)</label>
+                    <input type="number" defaultValue="93" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '3px' }} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Uptime Critical Alert (%)</label>
+                    <input type="number" defaultValue="85" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '3px' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+                    <button className="btn btn-primary" onClick={() => setShowThresholdConfig(false)}>Save Thresholds</button>
+                    <button className="btn" onClick={() => setShowThresholdConfig(false)}>Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Equipment Detail Modal */}
+          {selectedMetric && (
+            <div className="modal-overlay" onClick={() => setSelectedMetric(null)}>
+              <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: 600 }}>{selectedMetric.equipment}</div>
+                    <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>Equipment performance detail</div>
+                  </div>
+                  <button className="modal-close" onClick={() => setSelectedMetric(null)}>×</button>
+                </div>
+                <div className="modal-content">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#999', marginBottom: '4px' }}>Uptime</div>
+                      <div style={{ fontSize: '24px', fontWeight: 700, color: '#047857' }}>{selectedMetric.uptime}%</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#999', marginBottom: '4px' }}>SLA</div>
+                      <div style={{ fontSize: '24px', fontWeight: 700, color: '#2563eb' }}>{selectedMetric.sla}%</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#999', marginBottom: '4px' }}>Downtime (hrs)</div>
+                      <div style={{ fontSize: '24px', fontWeight: 700, color: '#d32f2f' }}>{selectedMetric.downtime}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#999', marginBottom: '4px' }}>Cost/Hour</div>
+                      <div style={{ fontSize: '24px', fontWeight: 700 }}>${selectedMetric.costPerHour}</div>
+                    </div>
+                  </div>
+                  <div style={{ borderTop: '1px solid #e0e0e0', paddingTop: '16px', marginTop: '16px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Last Maintenance</div>
+                    <div style={{ fontSize: '13px', color: '#666' }}>{selectedMetric.lastMaintenance}</div>
+                  </div>
+                  <button className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }} onClick={() => setSelectedMetric(null)}>Close</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== SIDEBAR ===== */
+    function Sidebar({ currentPage, onPageChange, role, onRoleChange, scope }) {
+      return (
+        <div className="sidebar">
+          <div className="sidebar-logo">NISO</div>
+          
+          <div className="user-context">
+            <div className="context-label">Role</div>
+            <div className="context-value">{role}</div>
+            <div className="context-label" style={{ marginTop: '8px' }}>Scope</div>
+            <div className="context-value">{scope}</div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-title">Navigation</div>
+            <div className={`nav-item ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => onPageChange('dashboard')}>📊 Dashboard</div>
+            <div className={`nav-item ${currentPage === 'readings' ? 'active' : ''}`} onClick={() => onPageChange('readings')}>📝 Readings</div>
+            <div className={`nav-item ${currentPage === 'reports' ? 'active' : ''}`} onClick={() => onPageChange('reports')}>📈 Reports</div>
+            <div className={`nav-item ${currentPage === 'equipment' ? 'active' : ''}`} onClick={() => onPageChange('equipment')}>⚙️ Equipment</div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-title">Switch Role</div>
+            <div className="role-buttons">
+              <button className={`role-btn ${role === 'Supervisor' ? 'active' : ''}`} onClick={() => onRoleChange('Supervisor')}>Supervisor</button>
+              <button className={`role-btn ${role === 'Station Admin' ? 'active' : ''}`} onClick={() => onRoleChange('Station Admin')}>Station Admin</button>
+              <button className={`role-btn ${role === 'Regional Admin' ? 'active' : ''}`} onClick={() => onRoleChange('Regional Admin')}>Regional Admin</button>
+              <button className={`role-btn ${role === 'HQ Admin' ? 'active' : ''}`} onClick={() => onRoleChange('HQ Admin')}>HQ Admin</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== MAIN APP ===== */
+    function App() {
+      const [currentPage, setCurrentPage] = useState('dashboard');
+      const [role, setRole] = useState('Supervisor');
+      const [timeRange, setTimeRange] = useState('30d');
+      
+      const scopeMap = { 'Supervisor': 'station', 'Station Admin': 'station', 'Regional Admin': 'region', 'HQ Admin': 'national' };
+      const scope = scopeMap[role] || 'station';
+
+      return (
+        <div className="app-wrapper">
+          <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} role={role} onRoleChange={setRole} scope={scope} />
+          <div className="main-content">
+            <div className="topbar">
+              <div className="topbar-left">
+                <div className="topbar-title">
+                  {currentPage === 'dashboard' && '📊 Advanced Reporting Dashboard'}
+                  {currentPage === 'readings' && '📝 Readings & Queue'}
+                  {currentPage === 'reports' && '📈 Reports'}
+                  {currentPage === 'equipment' && '⚙️ Equipment Management'}
+                </div>
+              </div>
+              <div className="topbar-right">
+                <div className="user-info">
+                  <div className="user-name">Test User</div>
+                  <div className="user-role">{role}</div>
+                </div>
+              </div>
+            </div>
+            
+            {currentPage === 'dashboard' && <Dashboard role={role} scope={scope} timeRange={timeRange} />}
+            {currentPage === 'readings' && (
+              <div className="content-area" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>Readings Module</div>
+                  <div style={{ fontSize: '13px' }}>Equipment queue, form input, operational logs</div>
+                </div>
+              </div>
+            )}
+            {currentPage === 'reports' && (
+              <div className="content-area" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>Reports Module</div>
+                  <div style={{ fontSize: '13px' }}>Historical analysis, export functionality</div>
+                </div>
+              </div>
+            )}
+            {currentPage === 'equipment' && (
+              <div className="content-area" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>Equipment Management</div>
+                  <div style={{ fontSize: '13px' }}>Fleet configuration, maintenance schedules</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

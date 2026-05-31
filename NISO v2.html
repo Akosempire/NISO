@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NISO v2 — Operational System</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: white; color: #333; }
+    
+    .app-wrapper { display: flex; min-height: 100vh; }
+    
+    /* SIDEBAR */
+    .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #e0e0e0; padding: 24px 0; overflow-y: auto; }
+    .sidebar-logo { padding: 0 20px 24px; font-size: 18px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; }
+    .user-context { padding: 12px 16px; background: #f0f0f0; margin: 0 12px 16px; border-radius: 4px; font-size: 11px; }
+    .context-label { font-weight: 600; color: #666; }
+    .context-value { color: #2563eb; font-weight: 600; margin-top: 2px; }
+    .role-switcher { padding: 0 16px; margin-bottom: 20px; }
+    .role-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; margin-bottom: 8px; display: block; }
+    .role-buttons { display: flex; flex-direction: column; gap: 4px; }
+    .role-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .role-btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .role-btn.active { background: #2563eb; color: white; border-color: #2563eb; font-weight: 600; }
+    .nav-section { padding: 0 12px; margin-bottom: 16px; }
+    .nav-section-title { padding: 0 8px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; }
+    .nav-item { padding: 10px 12px; border-radius: 3px; font-size: 13px; cursor: pointer; transition: all 0.2s; color: #666; }
+    .nav-item:hover { background: #f0f0f0; }
+    .nav-item.active { background: #e3f2fd; color: #2563eb; font-weight: 600; }
+    .nav-item.disabled { color: #ccc; cursor: not-allowed; opacity: 0.5; }
+    
+    /* TOP BAR */
+    .topbar { background: white; border-bottom: 1px solid #e0e0e0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar-left { display: flex; align-items: center; gap: 20px; }
+    .topbar-title { font-size: 18px; font-weight: 600; }
+    .topbar-meta { font-size: 12px; color: #999; display: flex; gap: 16px; }
+    .meta-item { display: flex; align-items: center; gap: 4px; }
+    .month-seal-badge { display: inline-block; padding: 4px 8px; background: #fee2e2; color: #991b1b; border-radius: 3px; font-size: 11px; font-weight: 600; }
+    .topbar-right { display: flex; gap: 16px; align-items: center; }
+    .user-info { text-align: right; font-size: 12px; }
+    .user-name { font-weight: 600; }
+    .user-role { color: #999; font-size: 11px; }
+    
+    /* MAIN CONTENT */
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .content-area { flex: 1; overflow-y: auto; padding: 24px; }
+    
+    /* DASHBOARD */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .card { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; }
+    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #666; }
+    .card-value { font-size: 32px; font-weight: 700; color: #2563eb; }
+    .card-meta { font-size: 12px; color: #999; margin-top: 8px; }
+    
+    /* TABLES */
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f9f9f9; }
+    th { padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #666; border-bottom: 1px solid #e0e0e0; }
+    td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+    tr:hover { background: #fafafa; }
+    .table-section { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+    .table-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    .table-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    
+    /* BUTTONS */
+    .btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-primary:hover:not(:disabled) { background: #1e53d6; }
+    .btn-sm { padding: 6px 10px; font-size: 11px; }
+    .btn-success { background: #047857; color: white; border-color: #047857; }
+    .btn-success:hover { background: #065f46; }
+    .btn-danger { background: #d32f2f; color: white; border-color: #d32f2f; }
+    .btn-danger:hover { background: #b71c1c; }
+    
+    /* BADGES */
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+    .badge-green { background: #e6f9f0; color: #047857; }
+    .badge-amber { background: #fffbeb; color: #b45309; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    
+    /* DRAWER */
+    .drawer-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.2); z-index: 999; }
+    .drawer { position: fixed; top: 0; right: 0; width: 420px; height: 100vh; background: white; border-left: 1px solid #e0e0e0; z-index: 1000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s; overflow: hidden; }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header { padding: 20px; border-bottom: 1px solid #e0e0e0; background: #f9f9f9; }
+    .drawer-title { font-size: 16px; font-weight: 600; }
+    .drawer-subtitle { font-size: 12px; color: #999; margin-top: 4px; }
+    .drawer-close { position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 20px; cursor: pointer; }
+    .drawer-content { flex: 1; overflow-y: auto; padding: 20px; }
+    .drawer-footer { padding: 20px; border-top: 1px solid #e0e0e0; display: flex; gap: 8px; background: #f9f9f9; }
+    
+    /* FORMS */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #333; }
+    .form-required { color: #d32f2f; }
+    .form-input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; font-family: inherit; }
+    .form-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .form-textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; min-height: 100px; resize: vertical; }
+    .form-textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .form-select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; }
+    
+    /* PREV READING */
+    .prev-reading { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 3px; padding: 12px; margin-bottom: 16px; font-size: 12px; }
+    .prev-label { font-weight: 600; color: #666; margin-bottom: 8px; }
+    .prev-value { color: #2563eb; font-family: 'SF Mono', Monaco, monospace; margin-bottom: 4px; }
+    
+    /* AUDIT TRAIL */
+    .audit-trail { background: #e3f2fd; border-left: 3px solid #2563eb; padding: 12px; margin-bottom: 16px; font-size: 11px; }
+    .audit-item { margin-bottom: 6px; color: #666; }
+    .audit-user { font-weight: 600; }
+    .audit-time { color: #999; }
+    
+    /* OPERATION QUEUE */
+    .queue-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .queue-item { padding: 12px; border: 1px solid #e0e0e0; border-radius: 3px; cursor: pointer; transition: all 0.2s; }
+    .queue-item:hover { background: #f0f8ff; border-color: #2563eb; }
+    .queue-item.completed { opacity: 0.6; background: #f0f0f0; }
+    .queue-item.active { background: #e3f2fd; border-color: #2563eb; border-width: 2px; }
+    .queue-status { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+    .queue-status.completed { background: #047857; }
+    .queue-status.pending { background: #b45309; }
+    .queue-status.alert { background: #d32f2f; }
+    
+    /* CODE PICKER */
+    .codes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-bottom: 16px; }
+    .code-chip { padding: 8px 12px; border: 1px solid #ddd; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .code-chip:hover { border-color: #2563eb; background: #f0f8ff; }
+    .code-chip.selected { background: #2563eb; color: white; border-color: #2563eb; }
+    
+    /* FORMULA ENGINE */
+    .formula-box { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 3px; padding: 12px; margin-bottom: 16px; font-family: 'SF Mono', Monaco, monospace; font-size: 12px; }
+    .formula-input { font-family: 'SF Mono', Monaco, monospace; }
+    .formula-result { background: #e3f2fd; color: #1e40af; padding: 8px 12px; border-radius: 3px; margin-top: 8px; font-weight: 600; }
+    
+    /* MONTH SEALING */
+    .seal-status { padding: 12px; border-radius: 3px; margin-bottom: 16px; }
+    .seal-status.open { background: #fffbeb; border: 1px solid #fcd34d; color: #b45309; }
+    .seal-status.review { background: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; }
+    .seal-status.sealed { background: #e6f9f0; border: 1px solid #6ee7b7; color: #047857; }
+    
+    /* EXPORT OPTIONS */
+    .export-dialog { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; margin-bottom: 16px; }
+    .export-format { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .export-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; }
+    .export-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+    
+    /* KNOWLEDGE CENTER */
+    .doc-item { padding: 12px; border: 1px solid #e0e0e0; border-radius: 3px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+    .doc-item:hover { background: #f0f8ff; border-color: #2563eb; }
+    .doc-title { font-weight: 600; margin-bottom: 4px; }
+    .doc-meta { font-size: 11px; color: #999; }
+    .doc-version { display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 2px; font-size: 10px; margin-left: 8px; }
+    
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .access-denied { padding: 40px; text-align: center; color: #d32f2f; }
+  </style>
+  <meta name="ext-resource-dependency" content="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" data-resource-id="babel" />
+  <template id="__bundler_thumbnail" data-bg-color="#ffffff">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <rect width="200" height="200" fill="#ffffff"/>
+      <rect width="48" height="200" fill="#f9f9f9" x="0"/>
+      <circle cx="24" cy="30" r="12" fill="#2563eb"/>
+      <text x="100" y="100" font-size="32" font-weight="700" fill="#2563eb" text-anchor="middle" dominant-baseline="central">NISO</text>
+      <text x="100" y="140" font-size="14" fill="#999" text-anchor="middle" dominant-baseline="central">Operations System</text>
+    </svg>
+  </template>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useCallback } = React;
+
+    /* ===== ROLE PERMISSIONS ===== */
+    const ROLE_PERMISSIONS = {
+      OPERATOR: { name: 'Operator', scope: 'station', canView: ['dashboard','readings','sla','interruptions','inspections','reports','knowledge'], canCreate: ['readings','sla','interruptions','inspections'], canEdit: ['readings','sla','interruptions','inspections'], canApprove: [], canExport: false, canSeal: false },
+      SUPERVISOR: { name: 'Supervisor', scope: 'station', canView: ['dashboard','readings','sla','interruptions','inspections','reports','knowledge'], canCreate: ['readings','sla','interruptions'], canEdit: ['readings','sla','interruptions'], canApprove: ['corrections'], canExport: true, canSeal: false },
+      STATION_ADMIN: { name: 'Station Admin', scope: 'station', canView: ['dashboard','readings','sla','interruptions','inspections','reports','knowledge'], canCreate: [], canEdit: ['interruptions'], canApprove: [], canExport: true, canSeal: true },
+      REGIONAL_ADMIN: { name: 'Regional Admin', scope: 'regional', canView: ['dashboard','readings','sla','interruptions','inspections','reports','knowledge'], canCreate: [], canEdit: [], canApprove: [], canExport: true, canSeal: true },
+      HQ_ADMIN: { name: 'HQ Admin', scope: 'national', canView: ['dashboard','readings','sla','interruptions','inspections','reports','knowledge'], canCreate: [], canEdit: [], canApprove: [], canExport: true, canSeal: true },
+      VIEWER: { name: 'Viewer', scope: 'shared', canView: ['dashboard','reports','knowledge'], canCreate: [], canEdit: [], canApprove: [], canExport: false, canSeal: false }
+    };
+
+    const ROLE_NAV = {
+      OPERATOR: [
+        { section: 'OPERATIONS', items: ['Dashboard', 'Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RECORDS', items: ['Reports'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      SUPERVISOR: [
+        { section: 'OPERATIONS', items: ['Dashboard', 'Readings', 'SLA', 'Interruptions', 'Inspections', 'Approvals'] },
+        { section: 'RECORDS', items: ['Reports'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      STATION_ADMIN: [
+        { section: 'STATION', items: ['Dashboard', 'Reports'] },
+        { section: 'OPERATIONS', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      REGIONAL_ADMIN: [
+        { section: 'REGIONAL', items: ['Dashboard', 'Reports'] },
+        { section: 'MONITORING', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      HQ_ADMIN: [
+        { section: 'NATIONAL', items: ['Dashboard', 'Reports'] },
+        { section: 'MONITORING', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      VIEWER: [
+        { section: 'SHARED', items: ['Dashboard', 'Reports'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ]
+    };
+
+    /* ===== OPERATIONAL CODES LIBRARY ===== */
+    const OPERATIONAL_CODES = {
+      INTERRUPTION_CAUSES: [
+        { code: 'OVL', name: 'Overload', category: 'Electrical' },
+        { code: 'FLT', name: 'Fault', category: 'Electrical' },
+        { code: 'MNT', name: 'Maintenance', category: 'Scheduled' },
+        { code: 'WTR', name: 'Weather', category: 'External' },
+        { code: 'EQF', name: 'Equipment Failure', category: 'Hardware' },
+        { code: 'TST', name: 'Testing', category: 'Operational' },
+        { code: 'OTH', name: 'Other', category: 'Unclassified' }
+      ],
+      INSPECTION_TYPES: [
+        { code: 'VIS', name: 'Visual Inspection' },
+        { code: 'OIL', name: 'Oil Test & Analysis' },
+        { code: 'ELE', name: 'Electrical Test' },
+        { code: 'THM', name: 'Thermal Imaging' },
+        { code: 'PRV', name: 'Preventive Maintenance' }
+      ]
+    };
+
+    /* ===== FORMULA ENGINE ===== */
+    const formulaEngine = {
+      formulas: {
+        'SLA_DIFF': { expr: 'ABS(ACTUAL - FORECAST)', version: 1, vars: ['ACTUAL', 'FORECAST'], description: 'SLA Difference' },
+        'MW_RATIO': { expr: 'ACTUAL / FORECAST * 100', version: 1, vars: ['ACTUAL', 'FORECAST'], description: 'MW Ratio %' }
+      },
+      evaluate: (formulaName, values) => {
+        const f = formulaEngine.formulas[formulaName];
+        if (!f) return null;
+        try {
+          let expr = f.expr;
+          f.vars.forEach(v => {
+            expr = expr.replace(new RegExp(v, 'g'), values[v] || 0);
+          });
+          return eval(expr.replace(/ABS/g, 'Math.abs').replace(/ACTUAL/g, '(' + (values.ACTUAL || 0) + ')').replace(/FORECAST/g, '(' + (values.FORECAST || 0) + ')'));
+        } catch (e) {
+          return null;
+        }
+      }
+    };
+
+    /* ===== AUDIT LOGGER ===== */
+    const auditLogger = {
+      log: (action, module, recordId, user, role, details = {}) => ({
+        id: `audit-${Date.now()}`,
+        action,
+        module,
+        recordId,
+        user,
+        role,
+        timestamp: new Date().toISOString(),
+        details
+      })
+    };
+
+    /* ===== MONTH SEALING ===== */
+    const monthSealing = {
+      states: { OPEN: 'OPEN', REVIEW: 'REVIEW', SEALED: 'SEALED' },
+      canEdit: (state) => state === 'OPEN',
+      canSeal: (state) => state === 'REVIEW',
+      records: { month: new Date().getMonth(), year: new Date().getFullYear(), state: 'OPEN' }
+    };
+
+    /* ===== SIDEBAR ===== */
+    function Sidebar({ role, onRoleChange, currentPage, onPageChange, userContext }) {
+      const navItems = ROLE_NAV[role] || [];
+      const permissions = ROLE_PERMISSIONS[role];
+
+      return (
+        <div className="sidebar">
+          <div className="sidebar-logo">NISO</div>
+          
+          <div className="user-context">
+            <div className="context-label">Scope</div>
+            <div className="context-value">
+              {permissions.scope === 'station' ? userContext.station : 
+               permissions.scope === 'regional' ? userContext.region :
+               permissions.scope === 'national' ? 'National' : 'Shared'}
+            </div>
+          </div>
+
+          <div className="role-switcher">
+            <label className="role-label">Switch Role</label>
+            <div className="role-buttons">
+              {Object.keys(ROLE_NAV).map((r) => (
+                <button
+                  key={r}
+                  className={`role-btn ${role === r ? 'active' : ''}`}
+                  onClick={() => onRoleChange(r)}
+                >
+                  {ROLE_PERMISSIONS[r].name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {navItems.map((section) => (
+            <div key={section.section} className="nav-section">
+              <div className="nav-section-title">{section.section}</div>
+              {section.items.map((item) => {
+                const canView = ROLE_PERMISSIONS[role].canView.includes(item.toLowerCase());
+                return (
+                  <div
+                    key={item}
+                    className={`nav-item ${currentPage === item ? 'active' : ''} ${!canView ? 'disabled' : ''}`}
+                    onClick={() => canView && onPageChange(item)}
+                  >
+                    {item}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    /* ===== TOP BAR ===== */
+    function TopBar({ role, currentPage, userContext, monthSealed, activeInterruptions }) {
+      const permissions = ROLE_PERMISSIONS[role];
+      const now = new Date();
+      const hour = now.getHours();
+      
+      return (
+        <div className="topbar">
+          <div className="topbar-left">
+            <div className="topbar-title">{currentPage}</div>
+            <div className="topbar-meta">
+              <div className="meta-item">{userContext.region} | {userContext.station}</div>
+              <div className="meta-item">{String(hour).padStart(2, '0')}:00</div>
+              {activeInterruptions > 0 && <div className="meta-item" style={{ color: '#d32f2f', fontWeight: '600' }}>⚠ {activeInterruptions} Active</div>}
+            </div>
+          </div>
+          <div className="topbar-right">
+            {monthSealed && <span className="month-seal-badge">SEALED</span>}
+            <div className="user-info">
+              <div className="user-name">John Operator</div>
+              <div className="user-role">{permissions.name}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== DASHBOARD ===== */
+    function Dashboard({ role, readings, slaData, interruptions, inspections }) {
+      const activeInterruptions = interruptions.filter(i => i.status === 'ACTIVE').length;
+      const totalReadings = readings.length;
+      const completedSLA = slaData.length;
+
+      return (
+        <div>
+          <div className="dashboard-grid">
+            <div className="card">
+              <div className="card-title">Equipment Online</div>
+              <div className="card-value">{6 - activeInterruptions}</div>
+              <div className="card-meta">Operational</div>
+            </div>
+            <div className="card">
+              <div className="card-title">Active Interruptions</div>
+              <div className="card-value" style={{ color: activeInterruptions > 0 ? '#d32f2f' : '#047857' }}>{activeInterruptions}</div>
+              <div className="card-meta">{activeInterruptions === 0 ? 'All clear' : 'Awaiting restoration'}</div>
+            </div>
+            <div className="card">
+              <div className="card-title">Readings Today</div>
+              <div className="card-value">{totalReadings}</div>
+              <div className="card-meta">Hours recorded</div>
+            </div>
+            <div className="card">
+              <div className="card-title">SLA Status</div>
+              <div className="card-value" style={{ color: '#047857' }}>100%</div>
+              <div className="card-meta">On target</div>
+            </div>
+          </div>
+
+          {ROLE_PERMISSIONS[role].canCreate.includes('readings') && (
+            <div className="table-section">
+              <h3>Quick Actions</h3>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button className="btn btn-primary">+ Record Reading</button>
+                <button className="btn btn-primary">+ SLA Entry</button>
+                <button className="btn btn-primary">+ New Interruption</button>
+                <button className="btn btn-primary">+ Inspection</button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== READINGS TABLE WITH OPERATION QUEUE ===== */
+    function ReadingsTable({ onDrawerOpen, readings, canCreate, canEdit }) {
+      const [queueIndex, setQueueIndex] = useState(0);
+      const equipment = ['2JEB-SGB1', '2JEB-KNJ1', '2SHR TR1', '2SHR-KTP1'];
+      
+      const getCompletionStatus = (eq) => {
+        const readingsForEq = readings.filter(r => r.equipment === eq);
+        if (readingsForEq.length === 0) return 'pending';
+        if (readingsForEq.some(r => !r.amp)) return 'partial';
+        return 'completed';
+      };
+
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>Hourly Readings — Equipment Queue</h3>
+            {canCreate && <button className="btn btn-primary btn-sm" onClick={() => setQueueIndex(0)}>Start Queue</button>}
+          </div>
+
+          {canCreate && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>OPERATION QUEUE — Hour 14:00</div>
+              <div className="queue-list">
+                {equipment.map((eq, idx) => {
+                  const status = getCompletionStatus(eq);
+                  return (
+                    <div
+                      key={eq}
+                      className={`queue-item ${status === 'completed' ? 'completed' : ''} ${queueIndex === idx ? 'active' : ''}`}
+                      onClick={() => setQueueIndex(idx)}
+                    >
+                      <span className={`queue-status ${status}`}></span>
+                      {eq} — {status === 'completed' ? '✓ Done' : status === 'partial' ? '◐ In Progress' : '○ Pending'}
+                    </div>
+                  );
+                })}
+              </div>
+              <button className="btn btn-primary" onClick={() => onDrawerOpen('reading', { equipment: equipment[queueIndex], hour: 14, amp: '', mw: '', mvar: '', kv: '', isNew: true })}>
+                Record {equipment[queueIndex]}
+              </button>
+            </div>
+          )}
+
+          <h4 style={{ fontSize: '12px', fontWeight: '600', marginTop: '20px', marginBottom: '12px' }}>All Readings</h4>
+          {readings.length === 0 ? (
+            <div className="empty-state" style={{ padding: '40px' }}>No readings yet</div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Equipment</th>
+                  <th>Hour</th>
+                  <th>AMP</th>
+                  <th>MW</th>
+                  <th>MVAR</th>
+                  <th>KV</th>
+                  <th>Time</th>
+                  {canEdit && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {readings.map((r) => (
+                  <tr key={r.id}>
+                    <td><strong>{r.equipment}</strong></td>
+                    <td>{String(r.hour).padStart(2, '0')}:00</td>
+                    <td className="mono">{r.amp || '—'}</td>
+                    <td className="mono">{r.mw || '—'}</td>
+                    <td className="mono">{r.mvar || '—'}</td>
+                    <td className="mono">{r.kv || '—'}</td>
+                    <td style={{ fontSize: '12px', color: '#999' }}>{r.timestamp}</td>
+                    {canEdit && <td><button className="btn btn-sm" onClick={() => onDrawerOpen('reading', r)}>Edit</button></td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== READING DRAWER ===== */
+    function ReadingDrawer({ isOpen, onClose, data, onSave, allReadings }) {
+      const [formData, setFormData] = useState(data || { equipment: '', hour: '', amp: '', mw: '', mvar: '', kv: '', isNew: false });
+      const isComplete = formData.amp && formData.mw && formData.mvar && formData.kv;
+
+      return (
+        <>
+          {isOpen && <div className="drawer-overlay" onClick={onClose}></div>}
+          <div className={`drawer ${isOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <button className="drawer-close" onClick={onClose}>×</button>
+              <div className="drawer-title">{formData.isNew ? 'Record Reading' : 'Edit Reading'}</div>
+              <div className="drawer-subtitle">{formData.equipment} • Hour {String(formData.hour).padStart(2, '0')}:00</div>
+            </div>
+            <div className="drawer-content">
+              <div className="form-group">
+                <label className="form-label">Amperage (AMP) <span className="form-required">*</span></label>
+                <input className="form-input mono" type="number" step="0.1" value={formData.amp} onChange={(e) => setFormData({ ...formData, amp: e.target.value })} placeholder="e.g. 450.2" autoFocus required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">MW (Real Power) <span className="form-required">*</span></label>
+                <input className="form-input mono" type="number" step="0.1" value={formData.mw} onChange={(e) => setFormData({ ...formData, mw: e.target.value })} placeholder="e.g. 125.5" required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">MVAR (Reactive Power) <span className="form-required">*</span></label>
+                <input className="form-input mono" type="number" step="0.1" value={formData.mvar} onChange={(e) => setFormData({ ...formData, mvar: e.target.value })} placeholder="e.g. 42.3" required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Voltage (KV) <span className="form-required">*</span></label>
+                <input className="form-input mono" type="number" step="0.1" value={formData.kv} onChange={(e) => setFormData({ ...formData, kv: e.target.value })} placeholder="e.g. 330.1" required />
+              </div>
+            </div>
+            <div className="drawer-footer">
+              <button className="btn btn-primary" onClick={() => { if (isComplete) { onSave(formData); onClose(); } }} disabled={!isComplete}>
+                {formData.isNew ? 'Save & Next' : 'Update'}
+              </button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    /* ===== SLA TABLE ===== */
+    function SLATable({ onDrawerOpen, slaData, canCreate, canEdit, formulaEngine }) {
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>SLA — Forecast vs. Actual</h3>
+            {canCreate && <button className="btn btn-primary btn-sm" onClick={() => onDrawerOpen('sla', { hour: 14, forecast: '', actual: '', remarks: '', isNew: true })}>+ Add SLA</button>}
+          </div>
+          {slaData.length === 0 ? (
+            <div className="empty-state" style={{ padding: '40px' }}>No SLA entries</div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Hour</th>
+                  <th>Forecast (MW)</th>
+                  <th>Actual (MW)</th>
+                  <th>Difference</th>
+                  <th>Status</th>
+                  {canEdit && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {slaData.map((row) => {
+                  const diff = Math.abs(row.actual - row.forecast);
+                  const status = diff <= 5 ? 'PASS' : 'WARN';
+                  return (
+                    <tr key={row.id}>
+                      <td><strong>{String(row.hour).padStart(2, '0')}:00</strong></td>
+                      <td className="mono">{row.forecast}</td>
+                      <td className="mono">{row.actual}</td>
+                      <td className="mono" style={{ fontWeight: '600', color: status === 'PASS' ? '#047857' : '#b45309' }}>{diff.toFixed(1)}</td>
+                      <td><span className={`badge ${status === 'PASS' ? 'badge-green' : 'badge-amber'}`}>{status}</span></td>
+                      {canEdit && <td><button className="btn btn-sm" onClick={() => onDrawerOpen('sla', row)}>Edit</button></td>}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== SLA DRAWER ===== */
+    function SLADrawer({ isOpen, onClose, data, onSave, formulaEngine }) {
+      const [formData, setFormData] = useState(data || { hour: '', forecast: '', actual: '', remarks: '', isNew: false });
+      const diff = formData.actual && formData.forecast ? Math.abs(formData.actual - formData.forecast).toFixed(1) : '—';
+      const isComplete = formData.forecast && formData.actual;
+
+      return (
+        <>
+          {isOpen && <div className="drawer-overlay" onClick={onClose}></div>}
+          <div className={`drawer ${isOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <button className="drawer-close" onClick={onClose}>×</button>
+              <div className="drawer-title">{formData.isNew ? 'Record SLA' : 'Edit SLA'}</div>
+              <div className="drawer-subtitle">Hour {String(formData.hour).padStart(2, '0')}:00</div>
+            </div>
+            <div className="drawer-content">
+              <div className="form-group">
+                <label className="form-label">Forecast (MW) <span className="form-required">*</span></label>
+                <input className="form-input mono" type="number" step="0.1" value={formData.forecast} onChange={(e) => setFormData({ ...formData, forecast: parseFloat(e.target.value) || '' })} placeholder="e.g. 450" autoFocus required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Actual (MW) <span className="form-required">*</span></label>
+                <input className="form-input mono" type="number" step="0.1" value={formData.actual} onChange={(e) => setFormData({ ...formData, actual: parseFloat(e.target.value) || '' })} placeholder="e.g. 452" required />
+              </div>
+              {formData.actual && formData.forecast && (
+                <div className="prev-reading">
+                  <div className="prev-label">Difference (Auto-calculated via SLA_DIFF formula)</div>
+                  <div className="prev-value" style={{ fontSize: '14px', color: diff > 5 ? '#d32f2f' : '#047857', fontWeight: '600' }}>{diff} MW</div>
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label">Remarks</label>
+                <textarea className="form-textarea" value={formData.remarks || ''} onChange={(e) => setFormData({ ...formData, remarks: e.target.value })} placeholder="Any notes..." />
+              </div>
+            </div>
+            <div className="drawer-footer">
+              <button className="btn btn-primary" onClick={() => { if (isComplete) { onSave(formData); onClose(); } }} disabled={!isComplete}>
+                Save
+              </button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    /* ===== INTERRUPTIONS TABLE ===== */
+    function InterruptionsTable({ onDrawerOpen, interruptions, canCreate, canEdit }) {
+      const active = interruptions.filter(i => i.status === 'ACTIVE');
+      const restored = interruptions.filter(i => i.status === 'RESTORED');
+
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>Interruptions {active.length > 0 && <span style={{ color: '#d32f2f' }}>({active.length} Active)</span>}</h3>
+            {canCreate && <button className="btn btn-primary btn-sm" onClick={() => onDrawerOpen('interruption', { equipment: '', cause: '', tripDate: new Date().toISOString().split('T')[0], tripTime: '', restoreDate: '', restoreTime: '', notes: '', status: 'ACTIVE', isNew: true })}>+ New</button>}
+          </div>
+
+          {active.length > 0 && (
+            <>
+              <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#d32f2f', marginBottom: '12px' }}>Active ({active.length})</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Equipment</th>
+                    <th>Cause</th>
+                    <th>Trip Time</th>
+                    <th>Duration</th>
+                    {canEdit && <th></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {active.map((r) => (
+                    <tr key={r.id} style={{ background: '#ffe6e6' }}>
+                      <td><strong>{r.equipment}</strong></td>
+                      <td><span className="badge badge-red">{r.cause}</span></td>
+                      <td>{r.tripDate} {r.tripTime}</td>
+                      <td style={{ fontWeight: '600', color: '#d32f2f' }}>Active</td>
+                      {canEdit && <td><button className="btn btn-sm" onClick={() => onDrawerOpen('interruption', r)}>Restore</button></td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {restored.length > 0 && (
+            <>
+              <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#047857', marginBottom: '12px', marginTop: '20px' }}>History ({restored.length})</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Equipment</th>
+                    <th>Cause</th>
+                    <th>Trip → Restored</th>
+                    <th>Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {restored.map((r) => {
+                    const tripDt = new Date(`${r.tripDate} ${r.tripTime}`);
+                    const restoreDt = new Date(`${r.restoreDate} ${r.restoreTime}`);
+                    const durationMs = restoreDt - tripDt;
+                    const durationHrs = Math.floor(durationMs / 3600000);
+                    const durationMins = Math.floor((durationMs % 3600000) / 60000);
+                    return (
+                      <tr key={r.id}>
+                        <td><strong>{r.equipment}</strong></td>
+                        <td>{r.cause}</td>
+                        <td>{r.tripDate} {r.tripTime} → {r.restoreDate} {r.restoreTime}</td>
+                        <td className="mono" style={{ fontWeight: '600' }}>{durationHrs}h {durationMins}m</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {interruptions.length === 0 && <div className="empty-state" style={{ padding: '40px' }}>No interruptions</div>}
+        </div>
+      );
+    }
+
+    /* ===== INTERRUPTION DRAWER ===== */
+    function InterruptionDrawer({ isOpen, onClose, data, onSave }) {
+      const [formData, setFormData] = useState(data || { equipment: '', cause: '', tripDate: new Date().toISOString().split('T')[0], tripTime: '', restoreDate: '', restoreTime: '', notes: '', status: 'ACTIVE', isNew: false });
+      const [selectedCauses, setSelectedCauses] = useState([formData.cause]);
+      const isComplete = formData.equipment && formData.cause && formData.tripDate && formData.tripTime;
+
+      return (
+        <>
+          {isOpen && <div className="drawer-overlay" onClick={onClose}></div>}
+          <div className={`drawer ${isOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <button className="drawer-close" onClick={onClose}>×</button>
+              <div className="drawer-title">{formData.isNew ? 'New Interruption' : 'Edit Interruption'}</div>
+              <div className="drawer-subtitle">{formData.equipment || 'Select equipment'}</div>
+            </div>
+            <div className="drawer-content">
+              <div className="form-group">
+                <label className="form-label">Equipment <span className="form-required">*</span></label>
+                <select className="form-select" value={formData.equipment} onChange={(e) => setFormData({ ...formData, equipment: e.target.value })} required>
+                  <option value="">Select equipment...</option>
+                  {['2JEB-SGB1', '2JEB-KNJ1', '2SHR TR1', '2SHR-KTP1'].map(eq => <option key={eq} value={eq}>{eq}</option>)}
+                </select>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Cause <span className="form-required">*</span></label>
+                <div className="codes-grid">
+                  {OPERATIONAL_CODES.INTERRUPTION_CAUSES.map(c => (
+                    <div
+                      key={c.code}
+                      className={`code-chip ${selectedCauses.includes(c.name) ? 'selected' : ''}`}
+                      onClick={() => setFormData({ ...formData, cause: c.name })}
+                      title={c.category}
+                    >
+                      {c.code}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">Trip Date <span className="form-required">*</span></label>
+                  <input className="form-input" type="date" value={formData.tripDate} onChange={(e) => setFormData({ ...formData, tripDate: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Trip Time <span className="form-required">*</span></label>
+                  <input className="form-input" type="time" value={formData.tripTime} onChange={(e) => setFormData({ ...formData, tripTime: e.target.value })} required />
+                </div>
+              </div>
+
+              {formData.status === 'ACTIVE' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Restore Date</label>
+                      <input className="form-input" type="date" value={formData.restoreDate || ''} onChange={(e) => setFormData({ ...formData, restoreDate: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Restore Time</label>
+                      <input className="form-input" type="time" value={formData.restoreTime || ''} onChange={(e) => setFormData({ ...formData, restoreTime: e.target.value })} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="form-group">
+                <label className="form-label">Notes</label>
+                <textarea className="form-textarea" value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Operational details..." />
+              </div>
+            </div>
+            <div className="drawer-footer">
+              <button className="btn btn-primary" onClick={() => { if (isComplete) { onSave(formData); onClose(); } }} disabled={!isComplete}>
+                Save
+              </button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    /* ===== INSPECTIONS TABLE ===== */
+    function InspectionsTable({ onDrawerOpen, inspections, canCreate, canEdit }) {
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>Inspections</h3>
+            {canCreate && <button className="btn btn-primary btn-sm" onClick={() => onDrawerOpen('inspection', { equipment: '', type: '', inspector: '', date: new Date().toISOString().split('T')[0], findings: '', isNew: true })}>+ New</button>}
+          </div>
+          {inspections.length === 0 ? (
+            <div className="empty-state" style={{ padding: '40px' }}>No inspections</div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Equipment</th>
+                  <th>Type</th>
+                  <th>Inspector</th>
+                  <th>Date</th>
+                  {canEdit && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {inspections.map((r) => (
+                  <tr key={r.id}>
+                    <td><strong>{r.equipment}</strong></td>
+                    <td>{r.type}</td>
+                    <td>{r.inspector}</td>
+                    <td>{r.date}</td>
+                    {canEdit && <td><button className="btn btn-sm" onClick={() => onDrawerOpen('inspection', r)}>Edit</button></td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== INSPECTION DRAWER ===== */
+    function InspectionDrawer({ isOpen, onClose, data, onSave }) {
+      const [formData, setFormData] = useState(data || { equipment: '', type: '', inspector: '', date: new Date().toISOString().split('T')[0], findings: '', isNew: false });
+      const isComplete = formData.equipment && formData.type && formData.inspector && formData.date;
+
+      return (
+        <>
+          {isOpen && <div className="drawer-overlay" onClick={onClose}></div>}
+          <div className={`drawer ${isOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <button className="drawer-close" onClick={onClose}>×</button>
+              <div className="drawer-title">{formData.isNew ? 'New Inspection' : 'Edit Inspection'}</div>
+              <div className="drawer-subtitle">{formData.equipment || 'Select equipment'}</div>
+            </div>
+            <div className="drawer-content">
+              <div className="form-group">
+                <label className="form-label">Equipment <span className="form-required">*</span></label>
+                <select className="form-select" value={formData.equipment} onChange={(e) => setFormData({ ...formData, equipment: e.target.value })} required>
+                  <option value="">Select equipment...</option>
+                  {['2JEB-SGB1', '2JEB-KNJ1', '2SHR TR1', '2SHR-KTP1'].map(eq => <option key={eq} value={eq}>{eq}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Inspection Type <span className="form-required">*</span></label>
+                <select className="form-select" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} required>
+                  <option value="">Select type...</option>
+                  {OPERATIONAL_CODES.INSPECTION_TYPES.map(t => <option key={t.code} value={t.name}>{t.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Inspector <span className="form-required">*</span></label>
+                <input className="form-input" type="text" value={formData.inspector} onChange={(e) => setFormData({ ...formData, inspector: e.target.value })} placeholder="Inspector name" required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Date <span className="form-required">*</span></label>
+                <input className="form-input" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Findings</label>
+                <textarea className="form-textarea" value={formData.findings || ''} onChange={(e) => setFormData({ ...formData, findings: e.target.value })} placeholder="Inspection findings..." />
+              </div>
+            </div>
+            <div className="drawer-footer">
+              <button className="btn btn-primary" onClick={() => { if (isComplete) { onSave(formData); onClose(); } }} disabled={!isComplete}>
+                Save
+              </button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    /* ===== KNOWLEDGE CENTER ===== */
+    function KnowledgeCenter() {
+      const docs = [
+        { id: '1', title: 'SLA Calculation Procedures', version: '3.2', category: 'Procedures', updated: '2026-04-05' },
+        { id: '2', title: 'Equipment Naming Standards', version: '2.0', category: 'Standards', updated: '2026-03-20' },
+        { id: '3', title: 'Interruption Logging Guide', version: '4.1', category: 'Procedures', updated: '2026-04-08' },
+        { id: '4', title: 'Preventive Maintenance Schedule', version: '1.5', category: 'Maintenance', updated: '2026-02-15' },
+      ];
+
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>Knowledge Center</h3>
+            <input type="text" style={{ flex: 1, maxWidth: '200px', padding: '8px 10px', border: '1px solid #ddd', borderRadius: '3px', fontSize: '12px' }} placeholder="Search docs..." />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {docs.map(doc => (
+              <div key={doc.id} className="doc-item">
+                <div className="doc-title">{doc.title}<span className="doc-version">v{doc.version}</span></div>
+                <div className="doc-meta">{doc.category} • Updated {doc.updated}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== REPORTS ===== */
+    function ReportsView() {
+      const [exportFormat, setExportFormat] = useState('pdf');
+      
+      return (
+        <div className="table-section">
+          <h3>Reports & Export</h3>
+          <div className="export-dialog">
+            <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '12px' }}>Export Format</div>
+            <div className="export-format">
+              {['pdf', 'excel', 'csv'].map(fmt => (
+                <button
+                  key={fmt}
+                  className={`export-btn ${exportFormat === fmt ? 'active' : ''}`}
+                  onClick={() => setExportFormat(fmt)}
+                >
+                  {fmt.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <button className="btn btn-primary" style={{ width: '100%' }}>📥 Export Report</button>
+          </div>
+          <div style={{ marginTop: '20px', padding: '16px', background: '#f0f8ff', borderRadius: '3px', fontSize: '12px' }}>
+            <strong>Permissions:</strong> Export visible based on your scope and role authority.
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== MAIN APP ===== */
+    function App() {
+      const [role, setRole] = useState('OPERATOR');
+      const [currentPage, setCurrentPage] = useState('Dashboard');
+      const [drawerOpen, setDrawerOpen] = useState(false);
+      const [drawerType, setDrawerType] = useState(null);
+      const [drawerData, setDrawerData] = useState(null);
+
+      const [readings, setReadings] = useState([
+        { id: 'r1', equipment: '2JEB-SGB1', hour: 6, amp: '450.2', mw: '125.5', mvar: '42.3', kv: '330.1', timestamp: '06:15', auditLog: [] },
+        { id: 'r2', equipment: '2JEB-KNJ1', hour: 7, amp: '465.1', mw: '128.2', mvar: '44.1', kv: '330.2', timestamp: '07:14', auditLog: [] },
+      ]);
+
+      const [slaData, setSlaData] = useState([
+        { id: 's1', hour: 6, forecast: 450, actual: 452, remarks: '', createdAt: '2026-04-08 06:20', auditLog: [] },
+        { id: 's2', hour: 7, forecast: 460, actual: 465, remarks: 'Peak demand', createdAt: '2026-04-08 07:20', auditLog: [] },
+      ]);
+
+      const [interruptions, setInterruptions] = useState([
+        { id: 'i1', equipment: '2SHR TR1', cause: 'Overload', tripDate: '2026-04-08', tripTime: '06:32', restoreDate: '', restoreTime: '', status: 'ACTIVE', notes: '', auditLog: [] },
+        { id: 'i2', equipment: '2SHR-KTP1', cause: 'Maintenance', tripDate: '2026-04-07', tripTime: '14:00', restoreDate: '2026-04-07', restoreTime: '18:30', status: 'RESTORED', notes: '', auditLog: [] },
+      ]);
+
+      const [inspections, setInspections] = useState([
+        { id: 'insp1', equipment: '2JEB-SGB1', type: 'Visual Inspection', inspector: 'Chioma', date: '2026-04-08', findings: 'No visible damage.', auditLog: [] },
+      ]);
+
+      const userContext = {
+        station: 'AKANGBA',
+        region: 'NORTH'
+      };
+
+      const permissions = ROLE_PERMISSIONS[role];
+      const canView = (page) => permissions.canView.includes(page.toLowerCase());
+
+      const handleDrawerOpen = (type, data) => {
+        setDrawerType(type);
+        setDrawerData(data);
+        setDrawerOpen(true);
+      };
+
+      const handleDrawerClose = () => {
+        setDrawerOpen(false);
+        setTimeout(() => { setDrawerType(null); setDrawerData(null); }, 300);
+      };
+
+      const handleSaveReading = (formData) => {
+        if (formData.isNew) {
+          setReadings([...readings, {
+            id: `r${Date.now()}`,
+            equipment: formData.equipment,
+            hour: formData.hour,
+            amp: formData.amp,
+            mw: formData.mw,
+            mvar: formData.mvar,
+            kv: formData.kv,
+            timestamp: new Date().toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            auditLog: [auditLogger.log('created', 'readings', `r${Date.now()}`, 'John', role)]
+          }]);
+        } else {
+          setReadings(readings.map(r => r.id === formData.id ? { ...formData, auditLog: [...(r.auditLog || []), auditLogger.log('edited', 'readings', formData.id, 'John', role)] } : r));
+        }
+      };
+
+      const handleSaveSLA = (formData) => {
+        if (formData.isNew) {
+          setSlaData([...slaData, {
+            id: `s${Date.now()}`,
+            hour: formData.hour,
+            forecast: formData.forecast,
+            actual: formData.actual,
+            remarks: formData.remarks,
+            createdAt: new Date().toLocaleString(),
+            auditLog: [auditLogger.log('created', 'sla', `s${Date.now()}`, 'John', role)]
+          }]);
+        } else {
+          setSlaData(slaData.map(s => s.id === formData.id ? { ...formData, auditLog: [...(s.auditLog || []), auditLogger.log('edited', 'sla', formData.id, 'John', role)] } : s));
+        }
+      };
+
+      const handleSaveInterruption = (formData) => {
+        if (formData.isNew) {
+          setInterruptions([...interruptions, {
+            id: `i${Date.now()}`,
+            ...formData,
+            status: (formData.restoreDate && formData.restoreTime) ? 'RESTORED' : 'ACTIVE',
+            auditLog: [auditLogger.log('created', 'interruptions', `i${Date.now()}`, 'John', role)]
+          }]);
+        } else {
+          setInterruptions(interruptions.map(i => i.id === formData.id ? { ...formData, status: (formData.restoreDate && formData.restoreTime) ? 'RESTORED' : 'ACTIVE', auditLog: [...(i.auditLog || []), auditLogger.log('edited', 'interruptions', formData.id, 'John', role)] } : i));
+        }
+      };
+
+      const handleSaveInspection = (formData) => {
+        if (formData.isNew) {
+          setInspections([...inspections, {
+            id: `insp${Date.now()}`,
+            ...formData,
+            auditLog: [auditLogger.log('created', 'inspections', `insp${Date.now()}`, 'John', role)]
+          }]);
+        } else {
+          setInspections(inspections.map(insp => insp.id === formData.id ? { ...formData, auditLog: [...(insp.auditLog || []), auditLogger.log('edited', 'inspections', formData.id, 'John', role)] } : insp));
+        }
+      };
+
+      const renderContent = () => {
+        if (!canView(currentPage)) {
+          return <div className="access-denied">🔒 Access Denied</div>;
+        }
+
+        switch (currentPage) {
+          case 'Dashboard':
+            return <Dashboard role={role} readings={readings} slaData={slaData} interruptions={interruptions} inspections={inspections} />;
+          case 'Readings':
+            return <ReadingsTable onDrawerOpen={handleDrawerOpen} readings={readings} canCreate={permissions.canCreate.includes('readings')} canEdit={permissions.canEdit.includes('readings')} />;
+          case 'SLA':
+            return <SLATable onDrawerOpen={handleDrawerOpen} slaData={slaData} canCreate={permissions.canCreate.includes('sla')} canEdit={permissions.canEdit.includes('sla')} formulaEngine={formulaEngine} />;
+          case 'Interruptions':
+            return <InterruptionsTable onDrawerOpen={handleDrawerOpen} interruptions={interruptions} canCreate={permissions.canCreate.includes('interruptions')} canEdit={permissions.canEdit.includes('interruptions')} />;
+          case 'Inspections':
+            return <InspectionsTable onDrawerOpen={handleDrawerOpen} inspections={inspections} canCreate={permissions.canCreate.includes('inspections')} canEdit={permissions.canEdit.includes('inspections')} />;
+          case 'Reports':
+            return <ReportsView />;
+          case 'Knowledge Center':
+            return <KnowledgeCenter />;
+          case 'Approvals':
+            return <div className="table-section"><h3>Pending Approvals</h3><div className="empty-state">No pending approvals</div></div>;
+          default:
+            return <div className="empty-state">Page not found</div>;
+        }
+      };
+
+      const activeInterruptions = interruptions.filter(i => i.status === 'ACTIVE').length;
+
+      return (
+        <div className="app-wrapper">
+          <Sidebar role={role} onRoleChange={setRole} currentPage={currentPage} onPageChange={setCurrentPage} userContext={userContext} />
+          <div className="main-content">
+            <TopBar role={role} currentPage={currentPage} userContext={userContext} monthSealed={false} activeInterruptions={activeInterruptions} />
+            <div className="content-area">
+              {renderContent()}
+            </div>
+          </div>
+
+          {drawerType === 'reading' && <ReadingDrawer isOpen={drawerOpen} onClose={handleDrawerClose} data={drawerData} onSave={handleSaveReading} allReadings={readings} />}
+          {drawerType === 'sla' && <SLADrawer isOpen={drawerOpen} onClose={handleDrawerClose} data={drawerData} onSave={handleSaveSLA} formulaEngine={formulaEngine} />}
+          {drawerType === 'interruption' && <InterruptionDrawer isOpen={drawerOpen} onClose={handleDrawerClose} data={drawerData} onSave={handleSaveInterruption} />}
+          {drawerType === 'inspection' && <InspectionDrawer isOpen={drawerOpen} onClose={handleDrawerClose} data={drawerData} onSave={handleSaveInspection} />}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

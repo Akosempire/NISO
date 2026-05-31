@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NISO — Operational System</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: white; color: #333; }
+
+    .app-wrapper { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #e0e0e0; padding: 24px 0; overflow-y: auto; }
+    .sidebar-logo { padding: 0 20px 24px; font-size: 18px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; }
+    .user-context { padding: 12px 16px; background: #f0f0f0; margin: 0 12px 16px; border-radius: 4px; font-size: 11px; }
+    .context-label { font-weight: 600; color: #666; }
+    .context-value { color: #2563eb; font-weight: 600; margin-top: 2px; }
+
+    .role-switcher { padding: 0 16px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .role-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; }
+    .role-buttons { display: flex; flex-direction: column; gap: 4px; }
+    .role-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .role-btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .role-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+
+    .nav-section { padding: 0 12px; margin-bottom: 16px; }
+    .nav-section-title { padding: 0 8px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #999; }
+    .nav-item { padding: 10px 12px; border-radius: 3px; font-size: 13px; cursor: pointer; transition: all 0.2s; color: #666; }
+    .nav-item:hover { background: #f0f0f0; }
+    .nav-item.active { background: #e3f2fd; color: #2563eb; font-weight: 600; }
+    .nav-item.disabled { color: #ccc; cursor: not-allowed; opacity: 0.5; }
+
+    /* Top Bar */
+    .topbar { background: white; border-bottom: 1px solid #e0e0e0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar-left { display: flex; align-items: center; gap: 20px; }
+    .topbar-title { font-size: 18px; font-weight: 600; }
+    .month-seal-badge { display: inline-block; padding: 4px 8px; background: #fee2e2; color: #991b1b; border-radius: 3px; font-size: 11px; font-weight: 600; }
+    .topbar-right { display: flex; gap: 16px; align-items: center; font-size: 12px; }
+    .user-info { text-align: right; }
+    .user-name { font-weight: 600; }
+    .user-role { color: #999; font-size: 11px; }
+
+    /* Main Content */
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .content-area { flex: 1; overflow-y: auto; padding: 24px; }
+
+    /* Dashboard */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .card { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; }
+    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #666; }
+    .card-value { font-size: 32px; font-weight: 700; color: #2563eb; }
+    .card-meta { font-size: 12px; color: #999; margin-top: 8px; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f9f9f9; }
+    th { padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #666; border-bottom: 1px solid #e0e0e0; }
+    td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+    tr:hover { background: #fafafa; }
+
+    .table-section { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+    .table-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    .table-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .table-header-row h3 { margin: 0; }
+
+    /* Buttons */
+    .btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { border-color: #2563eb; background: #f0f8ff; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn-primary:hover:not(:disabled) { background: #1e53d6; }
+    .btn-sm { padding: 6px 10px; font-size: 11px; }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+    .badge-green { background: #e6f9f0; color: #047857; }
+    .badge-amber { background: #fffbeb; color: #b45309; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+
+    /* Side Drawer */
+    .drawer-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.2); z-index: 999; }
+    .drawer { position: fixed; top: 0; right: 0; width: 400px; height: 100vh; background: white; border-left: 1px solid #e0e0e0; z-index: 1000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s; overflow: hidden; }
+    .drawer.open { transform: translateX(0); }
+
+    .drawer-header { padding: 20px; border-bottom: 1px solid #e0e0e0; background: #f9f9f9; }
+    .drawer-title { font-size: 16px; font-weight: 600; }
+    .drawer-subtitle { font-size: 12px; color: #999; margin-top: 4px; }
+    .drawer-close { position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 20px; cursor: pointer; }
+
+    .drawer-content { flex: 1; overflow-y: auto; padding: 20px; }
+    .drawer-footer { padding: 20px; border-top: 1px solid #e0e0e0; display: flex; gap: 8px; background: #f9f9f9; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #333; }
+    .form-required { color: #d32f2f; }
+    .form-input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; font-family: inherit; }
+    .form-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .form-input.mono { font-family: 'SF Mono', Monaco, monospace; }
+    .form-textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 100px; }
+    .form-textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+
+    .prev-reading { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 3px; padding: 12px; margin-bottom: 16px; font-size: 12px; }
+    .prev-label { font-weight: 600; color: #666; margin-bottom: 8px; }
+    .prev-value { color: #2563eb; font-family: 'SF Mono', Monaco, monospace; margin-bottom: 4px; }
+
+    .audit-trail { background: #f0f8ff; border-left: 3px solid #2563eb; padding: 12px; margin-bottom: 16px; font-size: 11px; }
+    .audit-item { margin-bottom: 6px; color: #666; }
+    .audit-user { font-weight: 600; }
+    .audit-time { color: #999; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .access-denied { padding: 40px; text-align: center; color: #d32f2f; }
+  </style>
+  <meta name="ext-resource-dependency" content="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" data-resource-id="babel" />
+  <template id="__bundler_thumbnail" data-bg-color="#ffffff">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <rect width="200" height="200" fill="#ffffff"/>
+      <rect width="48" height="200" fill="#f9f9f9" x="0"/>
+      <circle cx="24" cy="30" r="12" fill="#2563eb"/>
+      <text x="100" y="100" font-size="32" font-weight="700" fill="#2563eb" text-anchor="middle" dominant-baseline="central">NISO</text>
+      <text x="100" y="140" font-size="14" fill="#999" text-anchor="middle" dominant-baseline="central">Operations System</text>
+    </svg>
+  </template>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    /* ===== PERMISSIONS & ROLE DEFINITIONS ===== */
+    const ROLE_PERMISSIONS = {
+      HQ_ADMIN: {
+        name: 'HQ Admin',
+        canView: ['dashboard', 'readings', 'sla', 'interruptions', 'inspections', 'reports', 'knowledge'],
+        canCreate: [],
+        canEdit: [],
+        canApprove: [],
+        scope: 'national',
+        regionScope: null
+      },
+      ICT_ADMIN: {
+        name: 'ICT Admin',
+        canView: ['dashboard', 'readings', 'sla', 'interruptions', 'inspections', 'reports', 'knowledge'],
+        canCreate: [],
+        canEdit: [],
+        canApprove: [],
+        scope: 'national',
+        regionScope: null
+      },
+      REGIONAL_ADMIN: {
+        name: 'Regional Admin',
+        canView: ['dashboard', 'readings', 'sla', 'interruptions', 'inspections', 'reports', 'knowledge'],
+        canCreate: [],
+        canEdit: [],
+        canApprove: [],
+        scope: 'regional',
+        regionScope: 'NORTH' // assigned region
+      },
+      STATION_ADMIN: {
+        name: 'Station Admin',
+        canView: ['dashboard', 'readings', 'sla', 'interruptions', 'inspections', 'reports', 'knowledge'],
+        canCreate: ['interruptions'],
+        canEdit: ['interruptions'],
+        canApprove: [],
+        scope: 'station',
+        stationScope: 'AKANGBA' // assigned station
+      },
+      SUPERVISOR: {
+        name: 'Supervisor',
+        canView: ['dashboard', 'readings', 'sla', 'interruptions', 'inspections', 'knowledge'],
+        canCreate: ['interruptions'],
+        canEdit: ['readings', 'sla', 'interruptions'],
+        canApprove: ['corrections'],
+        scope: 'station',
+        stationScope: 'AKANGBA'
+      },
+      OPERATOR: {
+        name: 'Operator',
+        canView: ['dashboard', 'readings', 'sla', 'interruptions', 'inspections', 'knowledge'],
+        canCreate: ['readings', 'sla', 'interruptions', 'inspections'],
+        canEdit: ['readings', 'sla', 'interruptions', 'inspections'],
+        canApprove: [],
+        scope: 'station',
+        stationScope: 'AKANGBA'
+      },
+      VIEWER: {
+        name: 'Viewer',
+        canView: ['dashboard', 'reports', 'knowledge'],
+        canCreate: [],
+        canEdit: [],
+        canApprove: [],
+        scope: 'shared',
+        stationScope: null
+      }
+    };
+
+    const ROLE_NAV = {
+      HQ_ADMIN: [
+        { section: 'NATIONAL OVERVIEW', items: ['Dashboard', 'Reports'] },
+        { section: 'MONITORING', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      ICT_ADMIN: [
+        { section: 'SYSTEM', items: ['Dashboard', 'Reports'] },
+        { section: 'MONITORING', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      REGIONAL_ADMIN: [
+        { section: 'REGIONAL', items: ['Dashboard', 'Reports'] },
+        { section: 'MONITORING', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      STATION_ADMIN: [
+        { section: 'STATION', items: ['Dashboard'] },
+        { section: 'OPERATIONS', items: ['Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'ADMIN', items: ['Reports', 'Knowledge Center'] }
+      ],
+      SUPERVISOR: [
+        { section: 'OPERATIONS', items: ['Dashboard', 'Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      OPERATOR: [
+        { section: 'QUEUE', items: ['Dashboard', 'Readings', 'SLA', 'Interruptions', 'Inspections'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ],
+      VIEWER: [
+        { section: 'REPORTS', items: ['Dashboard', 'Reports'] },
+        { section: 'RESOURCES', items: ['Knowledge Center'] }
+      ]
+    };
+
+    const REGIONS = {
+      NORTH: { id: 'north', name: 'North Region', stations: ['AKANGBA', 'KAINJI'] },
+      SOUTH: { id: 'south', name: 'South Region', stations: ['SAPELE', 'DELTA'] },
+      WEST: { id: 'west', name: 'West Region', stations: ['EGBIN', 'IBADANGENCO'] }
+    };
+
+    const EQUIPMENT_DATA = [
+      { id: 'eq-1', name: '2SHR TR1', type: '330KV', station: 'AKANGBA', region: 'NORTH' },
+      { id: 'eq-2', name: '2JEB TR1', type: '330KV', station: 'AKANGBA', region: 'NORTH' },
+      { id: 'eq-3', name: '2SHR-KTP 1', type: 'TRANSFORMER', station: 'AKANGBA', region: 'NORTH' },
+      { id: 'eq-4', name: '2SHR-MND1', type: 'TRANSFORMER', station: 'AKANGBA', region: 'NORTH' },
+      { id: 'eq-5', name: 'KAI-TR1', type: '330KV', station: 'KAINJI', region: 'NORTH' },
+      { id: 'eq-6', name: 'SAP-TR1', type: '330KV', station: 'SAPELE', region: 'SOUTH' },
+    ];
+
+    const INTERRUPTION_CAUSES = [
+      'Overload', 'Fault', 'Maintenance', 'Weather Event', 'Equipment Failure', 'Other'
+    ];
+
+    const INSPECTION_TYPES = [
+      'Visual Inspection', 'Oil Test & Analysis', 'Electrical Test', 'Thermal Imaging', 'Preventive Maintenance'
+    ];
+
+    /* ===== SIDEBAR ===== */
+    function Sidebar({ role, onRoleChange, currentPage, onPageChange, userContext }) {
+      const navItems = ROLE_NAV[role] || [];
+      const permissions = ROLE_PERMISSIONS[role];
+
+      return (
+        <div className="sidebar">
+          <div className="sidebar-logo">NISO</div>
+          
+          <div className="user-context">
+            <div className="context-label">Scope</div>
+            <div className="context-value">
+              {permissions.scope === 'station' ? userContext.station : 
+               permissions.scope === 'regional' ? userContext.region :
+               'National'}
+            </div>
+          </div>
+
+          <div className="role-switcher">
+            <div className="role-label">Role</div>
+            <div className="role-buttons">
+              {Object.keys(ROLE_NAV).map((r) => (
+                <button
+                  key={r}
+                  className={`role-btn ${role === r ? 'active' : ''}`}
+                  onClick={() => onRoleChange(r)}
+                  title={`Switch to ${ROLE_PERMISSIONS[r].name}`}
+                >
+                  {ROLE_PERMISSIONS[r].name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {navItems.map((section) => (
+            <div key={section.section} className="nav-section">
+              <div className="nav-section-title">{section.section}</div>
+              {section.items.map((item) => {
+                const canView = ROLE_PERMISSIONS[role].canView.includes(item.toLowerCase());
+                return (
+                  <div
+                    key={item}
+                    className={`nav-item ${currentPage === item ? 'active' : ''} ${!canView ? 'disabled' : ''}`}
+                    onClick={() => canView && onPageChange(item)}
+                    title={!canView ? 'Access denied' : ''}
+                  >
+                    {item}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    /* ===== TOP BAR ===== */
+    function TopBar({ role, currentPage, monthSealed }) {
+      const permissions = ROLE_PERMISSIONS[role];
+      return (
+        <div className="topbar">
+          <div className="topbar-left">
+            <div className="topbar-title">{currentPage}</div>
+            {monthSealed && <span className="month-seal-badge">Month Sealed</span>}
+          </div>
+          <div className="topbar-right">
+            <div className="user-info">
+              <div className="user-name">John Operator</div>
+              <div className="user-role">{permissions.name}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== DASHBOARD ===== */
+    function Dashboard() {
+      return (
+        <div>
+          <div className="dashboard-grid">
+            <div className="card">
+              <div className="card-title">Active Equipment</div>
+              <div className="card-value">4</div>
+              <div className="card-meta">All online and operational</div>
+            </div>
+            <div className="card">
+              <div className="card-title">Active Interruptions</div>
+              <div className="card-value">1</div>
+              <div className="card-meta">Awaiting restoration</div>
+            </div>
+            <div className="card">
+              <div className="card-title">SLA Status</div>
+              <div className="card-value" style={{ color: '#047857' }}>100%</div>
+              <div className="card-meta">Meeting targets today</div>
+            </div>
+            <div className="card">
+              <div className="card-title">Shift Time</div>
+              <div className="card-value">4h 32m</div>
+              <div className="card-meta">Since shift start</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== READINGS TABLE ===== */
+    function ReadingsTable({ onDrawerOpen, readings, canCreate, canEdit }) {
+      const getNextHour = () => {
+        const hours = readings.map(r => parseInt(r.hour)).sort((a, b) => b - a);
+        if (hours.length === 0) return 1;
+        const lastHour = hours[0];
+        return lastHour < 24 ? lastHour + 1 : null;
+      };
+
+      const nextHour = getNextHour();
+
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>Hourly Readings — 2SHR TR1</h3>
+            {nextHour && canCreate && (
+              <button className="btn btn-primary btn-sm" onClick={() => onDrawerOpen('reading', { hour: nextHour, amp: '', mw: '', mvar: '', kv: '', isNew: true })}>
+                + Record {String(nextHour).padStart(2, '0')}:00
+              </button>
+            )}
+          </div>
+          {readings.length === 0 ? (
+            <div className="empty-state" style={{ padding: '40px' }}>
+              <p>No readings recorded yet.</p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Hour</th>
+                  <th>AMP</th>
+                  <th>MW</th>
+                  <th>MVAR</th>
+                  <th>KV</th>
+                  <th>Time</th>
+                  {canEdit && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {readings.map((r) => (
+                  <tr key={r.id}>
+                    <td><strong>{String(r.hour).padStart(2, '0')}:00</strong></td>
+                    <td className="mono">{r.amp}</td>
+                    <td className="mono">{r.mw}</td>
+                    <td className="mono">{r.mvar}</td>
+                    <td className="mono">{r.kv}</td>
+                    <td style={{ fontSize: '12px', color: '#999' }}>{r.timestamp}</td>
+                    {canEdit && <td><button className="btn btn-sm" onClick={() => onDrawerOpen('reading', r)}>Edit</button></td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== READING DRAWER ===== */
+    function ReadingDrawer({ isOpen, onClose, data, onSave, allReadings }) {
+      const [formData, setFormData] = useState(data || { hour: '', amp: '', mw: '', mvar: '', kv: '', isNew: false });
+      
+      const prevReading = useMemo(() => {
+        if (!formData.hour) return null;
+        const prevHour = formData.hour - 1;
+        return allReadings?.find(r => r.hour === prevHour) || null;
+      }, [formData.hour, allReadings]);
+
+      const isComplete = formData.amp && formData.mw && formData.mvar && formData.kv;
+
+      return (
+        <>
+          {isOpen && <div className="drawer-overlay" onClick={onClose}></div>}
+          <div className={`drawer ${isOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <button className="drawer-close" onClick={onClose}>×</button>
+              <div className="drawer-title">{formData.isNew ? 'Record Reading' : 'Edit Reading'}</div>
+              <div className="drawer-subtitle">Hour: <strong>{String(formData.hour).padStart(2, '0')}:00</strong></div>
+            </div>
+            <div className="drawer-content">
+              {prevReading && (
+                <div className="prev-reading">
+                  <div className="prev-label">Previous Hour ({String(prevReading.hour).padStart(2, '0')}:00)</div>
+                  <div className="prev-value">AMP: {prevReading.amp}</div>
+                  <div className="prev-value">MW: {prevReading.mw}</div>
+                  <div className="prev-value">MVAR: {prevReading.mvar}</div>
+                  <div className="prev-value">KV: {prevReading.kv}</div>
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label">Amperage (AMP) <span className="form-required">*</span></label>
+                <input
+                  className="form-input mono"
+                  type="number"
+                  step="0.1"
+                  value={formData.amp}
+                  onChange={(e) => setFormData({ ...formData, amp: e.target.value })}
+                  placeholder="e.g. 450.2"
+                  autoFocus
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">MW (Real Power) <span className="form-required">*</span></label>
+                <input
+                  className="form-input mono"
+                  type="number"
+                  step="0.1"
+                  value={formData.mw}
+                  onChange={(e) => setFormData({ ...formData, mw: e.target.value })}
+                  placeholder="e.g. 125.5"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">MVAR (Reactive Power) <span className="form-required">*</span></label>
+                <input
+                  className="form-input mono"
+                  type="number"
+                  step="0.1"
+                  value={formData.mvar}
+                  onChange={(e) => setFormData({ ...formData, mvar: e.target.value })}
+                  placeholder="e.g. 42.3"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Voltage (KV) <span className="form-required">*</span></label>
+                <input
+                  className="form-input mono"
+                  type="number"
+                  step="0.1"
+                  value={formData.kv}
+                  onChange={(e) => setFormData({ ...formData, kv: e.target.value })}
+                  placeholder="e.g. 330.1"
+                  required
+                />
+              </div>
+              {formData.isNew && (
+                <div className="audit-trail">
+                  <strong>Save & Next:</strong> After saving, you'll be prompted to record the next hour (if available).
+                </div>
+              )}
+            </div>
+            <div className="drawer-footer">
+              <button 
+                className="btn btn-primary" 
+                onClick={() => { 
+                  if (isComplete) {
+                    onSave(formData); 
+                    onClose();
+                  }
+                }}
+                disabled={!isComplete}
+              >
+                {formData.isNew ? 'Save & Next' : 'Update'}
+              </button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    /* ===== SLA TABLE ===== */
+    function SLATable({ onDrawerOpen, slaData, canCreate, canEdit }) {
+      const getNextHour = () => {
+        const hours = slaData.map(r => parseInt(r.hour)).sort((a, b) => b - a);
+        if (hours.length === 0) return 1;
+        const lastHour = hours[0];
+        return lastHour < 24 ? lastHour + 1 : null;
+      };
+
+      const nextHour = getNextHour();
+
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>Hourly SLA — Actual vs. Forecast</h3>
+            {nextHour && canCreate && (
+              <button className="btn btn-primary btn-sm" onClick={() => onDrawerOpen('sla', { hour: nextHour, forecast: '', meter: '', actual: '', remarks: '', isNew: true })}>
+                + Record {String(nextHour).padStart(2, '0')}:00
+              </button>
+            )}
+          </div>
+          {slaData.length === 0 ? (
+            <div className="empty-state" style={{ padding: '40px' }}>
+              <p>No SLA entries recorded.</p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Hour</th>
+                  <th>Forecast (MW)</th>
+                  <th>Meter (MW)</th>
+                  <th>Actual (MW)</th>
+                  <th>Difference</th>
+                  <th>Status</th>
+                  {canEdit && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {slaData.map((row) => {
+                  const diff = Math.abs(row.actual - row.forecast);
+                  const status = diff <= 5 ? 'PASS' : 'WARN';
+                  return (
+                    <tr key={row.id}>
+                      <td><strong>{String(row.hour).padStart(2, '0')}:00</strong></td>
+                      <td className="mono">{row.forecast}</td>
+                      <td className="mono">{row.meter}</td>
+                      <td className="mono">{row.actual}</td>
+                      <td className="mono">{diff.toFixed(1)}</td>
+                      <td><span className={`badge ${status === 'PASS' ? 'badge-green' : 'badge-amber'}`}>{status}</span></td>
+                      {canEdit && <td><button className="btn btn-sm" onClick={() => onDrawerOpen('sla', row)}>Edit</button></td>}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== SLA DRAWER ===== */
+    function SLADrawer({ isOpen, onClose, data, onSave }) {
+      const [formData, setFormData] = useState(data || { hour: '', forecast: '', meter: '', actual: '', remarks: '', isNew: false });
+      const diff = formData.actual && formData.forecast ? Math.abs(formData.actual - formData.forecast).toFixed(1) : '—';
+      const isComplete = formData.forecast && formData.meter && formData.actual;
+
+      return (
+        <>
+          {isOpen && <div className="drawer-overlay" onClick={onClose}></div>}
+          <div className={`drawer ${isOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <button className="drawer-close" onClick={onClose}>×</button>
+              <div className="drawer-title">{formData.isNew ? 'Record SLA' : 'Edit SLA'}</div>
+              <div className="drawer-subtitle">Hour: <strong>{String(formData.hour).padStart(2, '0')}:00</strong></div>
+            </div>
+            <div className="drawer-content">
+              <div className="form-group">
+                <label className="form-label">Forecast (MW) <span className="form-required">*</span></label>
+                <input
+                  className="form-input mono"
+                  type="number"
+                  step="0.1"
+                  value={formData.forecast}
+                  onChange={(e) => setFormData({ ...formData, forecast: parseFloat(e.target.value) || '' })}
+                  placeholder="e.g. 450"
+                  autoFocus
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Meter Reading (MW) <span className="form-required">*</span></label>
+                <input
+                  className="form-input mono"
+                  type="number"
+                  step="0.1"
+                  value={formData.meter}
+                  onChange={(e) => setFormData({ ...formData, meter: parseFloat(e.target.value) || '' })}
+                  placeholder="e.g. 455"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Actual (MW) <span className="form-required">*</span></label>
+                <input
+                  className="form-input mono"
+                  type="number"
+                  step="0.1"
+                  value={formData.actual}
+                  onChange={(e) => setFormData({ ...formData, actual: parseFloat(e.target.value) || '' })}
+                  placeholder="e.g. 452"
+                  required
+                />
+              </div>
+              {formData.actual && formData.forecast && (
+                <div className="prev-reading">
+                  <div className="prev-label">Difference (Auto-calculated)</div>
+                  <div className="prev-value" style={{ fontSize: '14px', color: diff > 5 ? '#d32f2f' : '#047857' }}>
+                    {diff} MW
+                  </div>
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label">Remarks</label>
+                <textarea
+                  className="form-textarea"
+                  value={formData.remarks || ''}
+                  onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                  placeholder="Any notes or exceptions..."
+                />
+              </div>
+            </div>
+            <div className="drawer-footer">
+              <button 
+                className="btn btn-primary" 
+                onClick={() => { 
+                  if (isComplete) {
+                    onSave(formData); 
+                    onClose();
+                  }
+                }}
+                disabled={!isComplete}
+              >
+                {formData.isNew ? 'Save SLA' : 'Update'}
+              </button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    /* ===== HELPER: Calculate Duration ===== */
+    function calculateDuration(tripTime, restoreTime, tripDate, restoreDate) {
+      if (!tripTime || !restoreTime) return null;
+      
+      const tripDateTime = new Date(`${tripDate || '2026-04-08'} ${tripTime}`);
+      const restorDateTime = new Date(`${restoreDate || '2026-04-08'} ${restoreTime}`);
+      
+      if (restorDateTime < tripDateTime && !restoreDate) {
+        // Restoration next day
+        restorDateTime.setDate(restorDateTime.getDate() + 1);
+      }
+      
+      const diffMs = restorDateTime - tripDateTime;
+      const diffMins = Math.floor(diffMs / 60000);
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      
+      return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    }
+
+    /* ===== INTERRUPTIONS TABLE ===== */
+    function InterruptionsTable({ onDrawerOpen, interruptions, canCreate, canEdit }) {
+      const activeInterruptions = interruptions.filter(i => i.status === 'ACTIVE');
+      const restoredInterruptions = interruptions.filter(i => i.status === 'RESTORED');
+
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>Interruptions & Faults {activeInterruptions.length > 0 && <span style={{ color: '#991b1b' }}>({activeInterruptions.length} Active)</span>}</h3>
+            {canCreate && (
+              <button className="btn btn-primary btn-sm" onClick={() => onDrawerOpen('interruption', { equipment: '', cause: '', tripDate: new Date().toISOString().split('T')[0], tripTime: '', restoreDate: '', restoreTime: '', notes: '', status: 'ACTIVE', isNew: true })}>
+                + Record Interruption
+              </button>
+            )}
+          </div>
+
+          {activeInterruptions.length > 0 && (
+            <>
+              <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#991b1b', marginBottom: '12px', marginTop: '16px' }}>Active Interruptions</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Equipment</th>
+                    <th>Cause</th>
+                    <th>Trip Date/Time</th>
+                    <th>Status</th>
+                    <th>Time Out</th>
+                    {canEdit && <th></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeInterruptions.map((row) => {
+                    const now = new Date();
+                    const tripDateTime = new Date(`${row.tripDate} ${row.tripTime}`);
+                    const timeOutMs = now - tripDateTime;
+                    const timeOutMins = Math.floor(timeOutMs / 60000);
+                    const timeOutHours = Math.floor(timeOutMins / 60);
+                    const timeOutDisplay = timeOutHours > 0 ? `${timeOutHours}h ${timeOutMins % 60}m` : `${timeOutMins}m`;
+
+                    return (
+                      <tr key={row.id} style={{ background: '#ffe6e6' }}>
+                        <td><strong>{row.equipment}</strong></td>
+                        <td>{row.cause}</td>
+                        <td>{row.tripDate} {row.tripTime}</td>
+                        <td><span className="badge badge-red">ACTIVE</span></td>
+                        <td className="mono" style={{ fontWeight: '600', color: '#d32f2f' }}>{timeOutDisplay}</td>
+                        {canEdit && <td><button className="btn btn-sm" onClick={() => onDrawerOpen('interruption', row)}>Restore</button></td>}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {restoredInterruptions.length > 0 && (
+            <>
+              <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#047857', marginBottom: '12px', marginTop: '20px' }}>Restoration History</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Equipment</th>
+                    <th>Cause</th>
+                    <th>Trip Date/Time</th>
+                    <th>Restored Date/Time</th>
+                    <th>Duration</th>
+                    {canEdit && <th></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {restoredInterruptions.map((row) => {
+                    const duration = calculateDuration(row.tripTime, row.restoreTime, row.tripDate, row.restoreDate);
+                    return (
+                      <tr key={row.id}>
+                        <td><strong>{row.equipment}</strong></td>
+                        <td>{row.cause}</td>
+                        <td>{row.tripDate} {row.tripTime}</td>
+                        <td>{row.restoreDate} {row.restoreTime}</td>
+                        <td className="mono" style={{ fontWeight: '600' }}>{duration}</td>
+                        {canEdit && <td><button className="btn btn-sm" onClick={() => onDrawerOpen('interruption', row)}>Edit</button></td>}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {interruptions.length === 0 && (
+            <div className="empty-state" style={{ padding: '40px' }}>
+              <p>No interruptions. All equipment is operational.</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== INTERRUPTION DRAWER ===== */
+    function InterruptionDrawer({ isOpen, onClose, data, onSave }) {
+      const [formData, setFormData] = useState(data || { equipment: '', cause: '', tripDate: new Date().toISOString().split('T')[0], tripTime: '', restoreDate: '', restoreTime: '', notes: '', status: 'ACTIVE', isNew: false });
+      const isComplete = formData.equipment && formData.cause && formData.tripDate && formData.tripTime;
+      const isReadyToRestore = formData.status === 'ACTIVE' && formData.restoreDate && formData.restoreTime;
+      const duration = calculateDuration(formData.tripTime, formData.restoreTime, formData.tripDate, formData.restoreDate);
+
+      return (
+        <>
+          {isOpen && <div className="drawer-overlay" onClick={onClose}></div>}
+          <div className={`drawer ${isOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <button className="drawer-close" onClick={onClose}>×</button>
+              <div className="drawer-title">{formData.isNew ? 'Record Interruption' : formData.status === 'ACTIVE' ? 'Record Restoration' : 'Edit Interruption'}</div>
+              <div className="drawer-subtitle">
+                {formData.status === 'ACTIVE' ? '⚠️ Equipment Down' : '✓ Restored'}
+              </div>
+            </div>
+            <div className="drawer-content">
+              <div className="form-group">
+                <label className="form-label">Equipment <span className="form-required">*</span></label>
+                <select
+                  className="form-input"
+                  value={formData.equipment}
+                  onChange={(e) => setFormData({ ...formData, equipment: e.target.value })}
+                  disabled={!formData.isNew}
+                  autoFocus={formData.isNew}
+                >
+                  <option value="">Select equipment...</option>
+                  {EQUIPMENT_DATA.map((eq) => (
+                    <option key={eq.id} value={eq.name}>{eq.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Cause <span className="form-required">*</span></label>
+                <select
+                  className="form-input"
+                  value={formData.cause}
+                  onChange={(e) => setFormData({ ...formData, cause: e.target.value })}
+                  disabled={!formData.isNew}
+                >
+                  <option value="">Select cause...</option>
+                  {INTERRUPTION_CAUSES.map((cause) => (
+                    <option key={cause} value={cause}>{cause}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <fieldset style={{ border: '1px solid #e0e0e0', borderRadius: '4px', padding: '12px', marginBottom: '16px' }}>
+                <legend style={{ fontSize: '12px', fontWeight: '600', padding: '0 8px' }}>Trip (Outage Start)</legend>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group" style={{ marginBottom: '0' }}>
+                    <label className="form-label">Trip Date <span className="form-required">*</span></label>
+                    <input
+                      className="form-input"
+                      type="date"
+                      value={formData.tripDate}
+                      onChange={(e) => setFormData({ ...formData, tripDate: e.target.value })}
+                      disabled={!formData.isNew}
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '0' }}>
+                    <label className="form-label">Trip Time (HH:MM) <span className="form-required">*</span></label>
+                    <input
+                      className="form-input"
+                      type="time"
+                      value={formData.tripTime}
+                      onChange={(e) => setFormData({ ...formData, tripTime: e.target.value })}
+                      disabled={!formData.isNew}
+                      required
+                    />
+                  </div>
+                </div>
+              </fieldset>
+
+              {formData.status === 'ACTIVE' && (
+                <fieldset style={{ border: '1px solid #047857', borderRadius: '4px', padding: '12px', marginBottom: '16px', background: '#f0fdf4' }}>
+                  <legend style={{ fontSize: '12px', fontWeight: '600', padding: '0 8px', color: '#047857' }}>Restoration (To Record)</legend>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="form-group" style={{ marginBottom: '0' }}>
+                      <label className="form-label">Restore Date</label>
+                      <input
+                        className="form-input"
+                        type="date"
+                        value={formData.restoreDate || ''}
+                        onChange={(e) => setFormData({ ...formData, restoreDate: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: '0' }}>
+                      <label className="form-label">Restore Time (HH:MM)</label>
+                      <input
+                        className="form-input"
+                        type="time"
+                        value={formData.restoreTime || ''}
+                        onChange={(e) => setFormData({ ...formData, restoreTime: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+              )}
+
+              {formData.status === 'RESTORED' && (
+                <fieldset style={{ border: '1px solid #047857', borderRadius: '4px', padding: '12px', marginBottom: '16px', background: '#f0fdf4' }}>
+                  <legend style={{ fontSize: '12px', fontWeight: '600', padding: '0 8px', color: '#047857' }}>Restoration (Recorded)</legend>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="form-group" style={{ marginBottom: '0' }}>
+                      <label className="form-label">Restore Date</label>
+                      <input
+                        className="form-input"
+                        type="date"
+                        value={formData.restoreDate || ''}
+                        onChange={(e) => setFormData({ ...formData, restoreDate: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: '0' }}>
+                      <label className="form-label">Restore Time (HH:MM)</label>
+                      <input
+                        className="form-input"
+                        type="time"
+                        value={formData.restoreTime || ''}
+                        onChange={(e) => setFormData({ ...formData, restoreTime: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+              )}
+
+              {duration && (
+                <div className="prev-reading" style={{ background: '#e6f9f0', borderColor: '#047857' }}>
+                  <div className="prev-label" style={{ color: '#047857' }}>Total Duration</div>
+                  <div className="prev-value" style={{ fontSize: '16px', color: '#047857', fontWeight: '600' }}>{duration}</div>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="form-label">Notes</label>
+                <textarea
+                  className="form-textarea"
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Detailed notes, cause analysis, actions taken..."
+                />
+              </div>
+            </div>
+            <div className="drawer-footer">
+              <button 
+                className="btn btn-primary" 
+                onClick={() => { 
+                  if (isComplete) {
+                    const status = formData.status === 'ACTIVE' && isReadyToRestore ? 'RESTORED' : formData.status;
+                    onSave({ ...formData, status }); 
+                    onClose();
+                  }
+                }}
+                disabled={!isComplete}
+              >
+                {formData.isNew ? 'Record Trip' : formData.status === 'ACTIVE' && isReadyToRestore ? 'Record Restoration' : 'Update'}
+              </button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    /* ===== INSPECTIONS TABLE ===== */
+    function InspectionsTable({ onDrawerOpen, inspections, canCreate, canEdit }) {
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>Inspections & Field Visits</h3>
+            {canCreate && (
+              <button className="btn btn-primary btn-sm" onClick={() => onDrawerOpen('inspection', { equipment: '', type: '', inspector: '', date: new Date().toISOString().split('T')[0], findings: '', isNew: true })}>
+                + Log Inspection
+              </button>
+            )}
+          </div>
+          {inspections.length === 0 ? (
+            <div className="empty-state" style={{ padding: '40px' }}>
+              <p>No inspections logged.</p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Equipment</th>
+                  <th>Type</th>
+                  <th>Inspector</th>
+                  <th>Date</th>
+                  <th>Findings</th>
+                  {canEdit && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {inspections.map((row) => (
+                  <tr key={row.id}>
+                    <td><strong>{row.equipment}</strong></td>
+                    <td>{row.type}</td>
+                    <td>{row.inspector}</td>
+                    <td>{row.date}</td>
+                    <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.findings}</td>
+                    {canEdit && <td><button className="btn btn-sm" onClick={() => onDrawerOpen('inspection', row)}>Edit</button></td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== INSPECTION DRAWER ===== */
+    function InspectionDrawer({ isOpen, onClose, data, onSave }) {
+      const [formData, setFormData] = useState(data || { equipment: '', type: '', inspector: '', date: new Date().toISOString().split('T')[0], findings: '', isNew: false });
+      const isComplete = formData.equipment && formData.type && formData.inspector && formData.findings;
+
+      return (
+        <>
+          {isOpen && <div className="drawer-overlay" onClick={onClose}></div>}
+          <div className={`drawer ${isOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <button className="drawer-close" onClick={onClose}>×</button>
+              <div className="drawer-title">{formData.isNew ? 'Log Inspection' : 'Edit Inspection'}</div>
+            </div>
+            <div className="drawer-content">
+              <div className="form-group">
+                <label className="form-label">Equipment <span className="form-required">*</span></label>
+                <select
+                  className="form-input"
+                  value={formData.equipment}
+                  onChange={(e) => setFormData({ ...formData, equipment: e.target.value })}
+                  autoFocus
+                >
+                  <option value="">Select equipment...</option>
+                  {EQUIPMENT_DATA.map((eq) => (
+                    <option key={eq.id} value={eq.name}>{eq.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Type <span className="form-required">*</span></label>
+                <select
+                  className="form-input"
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                >
+                  <option value="">Select type...</option>
+                  {INSPECTION_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Inspector Name <span className="form-required">*</span></label>
+                <input
+                  className="form-input"
+                  type="text"
+                  value={formData.inspector}
+                  onChange={(e) => setFormData({ ...formData, inspector: e.target.value })}
+                  placeholder="Full name"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Date <span className="form-required">*</span></label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Findings <span className="form-required">*</span></label>
+                <textarea
+                  className="form-textarea"
+                  value={formData.findings}
+                  onChange={(e) => setFormData({ ...formData, findings: e.target.value })}
+                  placeholder="Detailed findings..."
+                  required
+                />
+              </div>
+            </div>
+            <div className="drawer-footer">
+              <button 
+                className="btn btn-primary" 
+                onClick={() => { 
+                  if (isComplete) {
+                    onSave(formData); 
+                    onClose();
+                  }
+                }}
+                disabled={!isComplete}
+              >
+                {formData.isNew ? 'Save Inspection' : 'Update'}
+              </button>
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    /* ===== REPORTS ===== */
+    function ReportsView() {
+      const reports = [
+        { id: 'r1', name: 'Daily Report', desc: 'Equipment, interruptions, SLA summary' },
+        { id: 'r2', name: 'SLA Report', desc: 'Hourly forecast vs. actual analysis' },
+        { id: 'r3', name: 'Interruption Report', desc: 'Trip causes and restoration analysis' },
+        { id: 'r4', name: 'Monthly Report', desc: 'Month-end seal and performance metrics' },
+      ];
+
+      return (
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            {reports.map((report) => (
+              <div key={report.id} className="card">
+                <div className="card-title">{report.name}</div>
+                <div style={{ fontSize: '12px', color: '#999', marginBottom: '12px' }}>{report.desc}</div>
+                <button className="btn btn-primary btn-sm">Generate</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ===== KNOWLEDGE CENTER ===== */
+    function KnowledgeCenter() {
+      const docs = [
+        { id: 'd1', title: '330KV Operations Guide', category: 'Procedures', updated: '2026-03-15' },
+        { id: 'd2', title: 'Transformer Maintenance', category: 'Maintenance', updated: '2026-03-01' },
+        { id: 'd3', title: 'Emergency Response Plan', category: 'Safety', updated: '2026-02-28' },
+      ];
+
+      return (
+        <div className="table-section">
+          <h3>Knowledge Center & Documentation</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Updated</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {docs.map((doc) => (
+                <tr key={doc.id}>
+                  <td><strong>{doc.title}</strong></td>
+                  <td>{doc.category}</td>
+                  <td>{doc.updated}</td>
+                  <td><button className="btn btn-sm">View</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    /* ===== CORRECTIONS/APPROVALS TABLE ===== */
+    function CorrectionsTable({ onDrawerOpen, corrections, canApprove }) {
+      const pending = corrections.filter(c => c.status === 'PENDING');
+      const approved = corrections.filter(c => c.status === 'APPROVED');
+      const rejected = corrections.filter(c => c.status === 'REJECTED');
+
+      return (
+        <div className="table-section">
+          <div className="table-header-row">
+            <h3>Corrections & Approvals {pending.length > 0 && <span style={{ color: '#d32f2f' }}>({pending.length} Pending)</span>}</h3>
+          </div>
+
+          {canApprove && pending.length > 0 && (
+            <>
+              <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#d32f2f', marginBottom: '12px', marginTop: '16px' }}>Pending Your Review</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Module</th>
+                    <th>Field</th>
+                    <th>Old → New</th>
+                    <th>Reason</th>
+                    <th>Submitted By</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pending.map((corr) => (
+                    <tr key={corr.id} style={{ background: '#ffe6e6' }}>
+                      <td><strong>{corr.module.toUpperCase()}</strong></td>
+                      <td>{corr.field}</td>
+                      <td className="mono" style={{ fontSize: '11px' }}>{corr.oldValue} → {corr.newValue}</td>
+                      <td>{corr.reason}</td>
+                      <td>{corr.submittedBy}</td>
+                      <td><button className="btn btn-sm" onClick={() => onDrawerOpen('approval', corr)}>Review</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {approved.length > 0 && (
+            <>
+              <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#047857', marginBottom: '12px', marginTop: '20px' }}>Approved</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Module</th>
+                    <th>Field</th>
+                    <th>Old → New</th>
+                    <th>Approved By</th>
+                    <th>Approved At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {approved.map((corr) => (
+                    <tr key={corr.id}>
+                      <td><strong>{corr.module.toUpperCase()}</strong></td>
+                      <td>{corr.field}</td>
+                      <td className="mono" style={{ fontSize: '11px' }}>{corr.oldValue} → {corr.newValue}</td>
+                      <td>{corr.approvedBy}</td>
+                      <td>{corr.approvedAt}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {corrections.length === 0 && (
+            <div className="empty-state" style={{ padding: '40px' }}>
+              <p>No corrections pending or approved.</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ===== APPROVAL DRAWER ===== */
+    function ApprovalDrawer({ isOpen, onClose, data, onApprove, onReject }) {
+      const [decision, setDecision] = useState('APPROVE');
+      const [remarks, setRemarks] = useState('');
+
+      if (!data) return null;
+
+      return (
+        <>
+          {isOpen && <div className="drawer-overlay" onClick={onClose}></div>}
+          <div className={`drawer ${isOpen ? 'open' : ''}`}>
+            <div className="drawer-header">
+              <button className="drawer-close" onClick={onClose}>×</button>
+              <div className="drawer-title">Review Correction</div>
+              <div className="drawer-subtitle">{data.module} — {data.field}</div>
+            </div>
+            <div className="drawer-content">
+              <div style={{ background: '#f9f9f9', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                  <strong>Submitted by:</strong> {data.submittedBy} at {data.submittedAt}
+                </div>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                  <strong>Reason:</strong> {data.reason}
+                </div>
+              </div>
+
+              <div className="prev-reading">
+                <div className="prev-label">Original Value</div>
+                <div className="prev-value" style={{ fontSize: '14px' }}>{data.oldValue}</div>
+              </div>
+
+              <div className="prev-reading" style={{ background: '#e6f9f0', borderColor: '#047857' }}>
+                <div className="prev-label" style={{ color: '#047857' }}>Proposed Value</div>
+                <div className="prev-value" style={{ fontSize: '14px', color: '#047857' }}>{data.newValue}</div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Decision <span className="form-required">*</span></label>
+                <select
+                  className="form-input"
+                  value={decision}
+                  onChange={(e) => setDecision(e.target.value)}
+                >
+                  <option value="APPROVE">Approve</option>
+                  <option value="REJECT">Reject</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Comments</label>
+                <textarea
+                  className="form-textarea"
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder="Your review notes..."
+                />
+              </div>
+            </div>
+            <div className="drawer-footer">
+              {decision === 'APPROVE' ? (
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => { 
+                    onApprove(data.id, remarks); 
+                    onClose();
+                  }}
+                >
+                  Approve
+                </button>
+              ) : (
+                <button 
+                  className="btn" 
+                  style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}
+                  onClick={() => { 
+                    onReject(data.id, remarks); 
+                    onClose();
+                  }}
+                >
+                  Reject
+                </button>
+              )}
+              <button className="btn" onClick={onClose}>Cancel</button>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    /* ===== MAIN APP ===== */
+    function App() {
+      const [role, setRole] = useState('OPERATOR');
+      const [currentPage, setCurrentPage] = useState('Dashboard');
+      const [drawerOpen, setDrawerOpen] = useState(false);
+      const [drawerType, setDrawerType] = useState(null);
+      const [drawerData, setDrawerData] = useState(null);
+
+      const [readings, setReadings] = useState([
+        { id: 'r1', equipment: '2SHR TR1', hour: 6, amp: '450.2', mw: '125.5', mvar: '42.3', kv: '330.1', timestamp: '06:15', createdBy: 'John', createdAt: '2026-04-08 06:15', auditLog: [] },
+        { id: 'r2', equipment: '2SHR TR1', hour: 7, amp: '465.1', mw: '128.2', mvar: '44.1', kv: '330.2', timestamp: '07:14', createdBy: 'John', createdAt: '2026-04-08 07:14', auditLog: [] },
+      ]);
+
+      const [slaData, setSlaData] = useState([
+        { id: 's1', hour: 6, forecast: 450, meter: 455, actual: 452, remarks: '', createdBy: 'John', createdAt: '2026-04-08 06:20', auditLog: [] },
+        { id: 's2', hour: 7, forecast: 460, meter: 465, actual: 465, remarks: 'Peak demand', createdBy: 'John', createdAt: '2026-04-08 07:20', auditLog: [] },
+      ]);
+
+      const [interruptions, setInterruptions] = useState([
+        { id: 'i1', equipment: '2SHR-MND1', cause: 'Overload', tripTime: '06:32', restoreTime: '', status: 'ACTIVE', duration: '', notes: '', createdBy: 'John', createdAt: '2026-04-08 06:35', auditLog: [] },
+      ]);
+
+      const [inspections, setInspections] = useState([
+        { id: 'insp1', equipment: '2SHR TR1', type: 'Visual Inspection', inspector: 'Chioma Okafor', date: '2026-04-08', findings: 'No visible damage.', createdBy: 'Chioma', createdAt: '2026-04-08 10:00', auditLog: [] },
+      ]);
+
+      const [corrections, setCorrections] = useState([
+        { id: 'corr1', module: 'readings', recordId: 'r1', field: 'amp', oldValue: '450.2', newValue: '450.5', reason: 'Transcription error', submittedBy: 'John', submittedAt: '2026-04-08 06:20', status: 'PENDING', approvedBy: null, approvedAt: null, auditLog: [] },
+        { id: 'corr2', module: 'sla', recordId: 's1', field: 'actual', oldValue: '452', newValue: '453', reason: 'Meter re-read', submittedBy: 'John', submittedAt: '2026-04-08 06:25', status: 'APPROVED', approvedBy: 'Supervisor', approvedAt: '2026-04-08 06:30', auditLog: [] },
+      ]);
+
+      const userContext = {
+        station: 'AKANGBA',
+        region: 'NORTH'
+      };
+
+      const permissions = ROLE_PERMISSIONS[role];
+      const canViewPage = (page) => permissions.canView.includes(page.toLowerCase());
+      const canCreateModule = (module) => permissions.canCreate.includes(module.toLowerCase());
+      const canEditModule = (module) => permissions.canEdit.includes(module.toLowerCase());
+
+      // Data isolation based on user scope
+      const getVisibleEquipment = () => {
+        if (permissions.scope === 'station') {
+          return EQUIPMENT_DATA.filter(e => e.station === userContext.station);
+        } else if (permissions.scope === 'regional') {
+          return EQUIPMENT_DATA.filter(e => e.region === userContext.region);
+        }
+        return EQUIPMENT_DATA; // HQ/ICT can see all
+      };
+
+      const getVisibleReadings = () => {
+        const visibleEquip = getVisibleEquipment().map(e => e.name);
+        return readings.filter(r => visibleEquip.includes(r.equipment));
+      };
+
+      const getVisibleSLA = () => {
+        if (permissions.scope === 'national') return slaData;
+        if (permissions.scope === 'regional') return slaData; // TODO: filter by region
+        return slaData; // Station gets all for now
+      };
+
+      const getVisibleInterruptions = () => {
+        const visibleEquip = getVisibleEquipment().map(e => e.name);
+        return interruptions.filter(i => visibleEquip.includes(i.equipment));
+      };
+
+      const getVisibleInspections = () => {
+        const visibleEquip = getVisibleEquipment().map(e => e.name);
+        return inspections.filter(i => visibleEquip.includes(i.equipment));
+      };
+
+      const handleDrawerOpen = (type, data) => {
+        setDrawerType(type);
+        setDrawerData(data);
+        setDrawerOpen(true);
+      };
+
+      const handleDrawerClose = () => {
+        setDrawerOpen(false);
+        setTimeout(() => {
+          setDrawerType(null);
+          setDrawerData(null);
+        }, 300);
+      };
+
+      const handleSaveReading = (formData) => {
+        if (formData.isNew) {
+          const newReading = {
+            id: `r${Date.now()}`,
+            equipment: '2SHR TR1',
+            hour: formData.hour,
+            amp: formData.amp,
+            mw: formData.mw,
+            mvar: formData.mvar,
+            kv: formData.kv,
+            timestamp: new Date().toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            createdBy: 'John',
+            createdAt: new Date().toLocaleString(),
+            station: userContext.station,
+            region: userContext.region,
+            auditLog: [{ action: 'created', by: 'John', at: new Date().toISOString(), role }]
+          };
+          setReadings([...readings, newReading]);
+        } else {
+          setReadings(readings.map(r => 
+            r.id === formData.id 
+              ? { ...formData, auditLog: [...(r.auditLog || []), { action: 'edited', by: 'John', at: new Date().toISOString(), role }] } 
+              : r
+          ));
+        }
+      };
+
+      const handleSaveSLA = (formData) => {
+        if (formData.isNew) {
+          const newSLA = {
+            id: `s${Date.now()}`,
+            hour: formData.hour,
+            forecast: formData.forecast,
+            meter: formData.meter,
+            actual: formData.actual,
+            remarks: formData.remarks,
+            createdBy: 'John',
+            createdAt: new Date().toLocaleString(),
+            station: userContext.station,
+            region: userContext.region,
+            auditLog: [{ action: 'created', by: 'John', at: new Date().toISOString(), role }]
+          };
+          setSlaData([...slaData, newSLA]);
+        } else {
+          setSlaData(slaData.map(s => 
+            s.id === formData.id 
+              ? { ...formData, auditLog: [...(s.auditLog || []), { action: 'edited', by: 'John', at: new Date().toISOString(), role }] } 
+              : s
+          ));
+        }
+      };
+
+      const handleSaveInterruption = (formData) => {
+        if (formData.isNew) {
+          const newInt = {
+            id: `i${Date.now()}`,
+            equipment: formData.equipment,
+            cause: formData.cause,
+            tripDate: formData.tripDate,
+            tripTime: formData.tripTime,
+            restoreDate: formData.restoreDate || '',
+            restoreTime: formData.restoreTime || '',
+            status: formData.restoreDate && formData.restoreTime ? 'RESTORED' : 'ACTIVE',
+            duration: calculateDuration(formData.tripTime, formData.restoreTime, formData.tripDate, formData.restoreDate) || '',
+            notes: formData.notes,
+            createdBy: 'John',
+            createdAt: new Date().toLocaleString(),
+            station: userContext.station,
+            region: userContext.region,
+            auditLog: [{ action: 'created (trip)', by: 'John', at: new Date().toISOString(), role }]
+          };
+          setInterruptions([...interruptions, newInt]);
+        } else {
+          setInterruptions(interruptions.map(i => {
+            if (i.id === formData.id) {
+              const wasActive = i.status === 'ACTIVE';
+              const isNowRestored = formData.restoreDate && formData.restoreTime;
+              const newStatus = isNowRestored ? 'RESTORED' : formData.status;
+              const action = wasActive && isNowRestored ? 'restored' : 'edited';
+              
+              return {
+                ...formData,
+                status: newStatus,
+                duration: calculateDuration(formData.tripTime, formData.restoreTime, formData.tripDate, formData.restoreDate) || '',
+                auditLog: [...(i.auditLog || []), { action, by: 'John', at: new Date().toISOString(), role }]
+              };
+            }
+            return i;
+          }));
+        }
+      };
+
+      const handleSaveInspection = (formData) => {
+        if (formData.isNew) {
+          const newInsp = {
+            id: `insp${Date.now()}`,
+            equipment: formData.equipment,
+            type: formData.type,
+            inspector: formData.inspector,
+            date: formData.date,
+            findings: formData.findings,
+            createdBy: 'John',
+            createdAt: new Date().toLocaleString(),
+            station: userContext.station,
+            region: userContext.region,
+            auditLog: [{ action: 'created', by: 'John', at: new Date().toISOString(), role }]
+          };
+          setInspections([...inspections, newInsp]);
+        } else {
+          setInspections(inspections.map(insp => 
+            insp.id === formData.id 
+              ? { ...formData, auditLog: [...(insp.auditLog || []), { action: 'edited', by: 'John', at: new Date().toISOString(), role }] } 
+              : insp
+          ));
+        }
+      };
+
+      const handleApproveCorrection = (correctionId, remarks) => {
+        setCorrections(corrections.map(c => 
+          c.id === correctionId 
+            ? { ...c, status: 'APPROVED', approvedBy: 'Supervisor', approvedAt: new Date().toLocaleString(), auditLog: [...(c.auditLog || []), { action: 'approved', by: 'Supervisor', at: new Date().toISOString(), remarks }] }
+            : c
+        ));
+      };
+
+      const handleRejectCorrection = (correctionId, remarks) => {
+        setCorrections(corrections.map(c => 
+          c.id === correctionId 
+            ? { ...c, status: 'REJECTED', auditLog: [...(c.auditLog || []), { action: 'rejected', by: 'Supervisor', at: new Date().toISOString(), remarks }] }
+            : c
+        ));
+      };
+
+      const renderContent = () => {
+        if (!canViewPage(currentPage)) {
+          return <div className="access-denied"><p>🔒 Access Denied</p><p style={{ fontSize: '13px', marginTop: '12px' }}>You do not have permission to view this page.</p></div>;
+        }
+
+        switch (currentPage) {
+          case 'Dashboard':
+            return <Dashboard />;
+          case 'Readings':
+            return <ReadingsTable onDrawerOpen={handleDrawerOpen} readings={getVisibleReadings()} canCreate={canCreateModule('readings')} canEdit={canEditModule('readings')} />;
+          case 'SLA':
+            return <SLATable onDrawerOpen={handleDrawerOpen} slaData={getVisibleSLA()} canCreate={canCreateModule('sla')} canEdit={canEditModule('sla')} />;
+          case 'Interruptions':
+            return <InterruptionsTable onDrawerOpen={handleDrawerOpen} interruptions={getVisibleInterruptions()} canCreate={canCreateModule('interruptions')} canEdit={canEditModule('interruptions')} />;
+          case 'Inspections':
+            return <InspectionsTable onDrawerOpen={handleDrawerOpen} inspections={getVisibleInspections()} canCreate={canCreateModule('inspections')} canEdit={canEditModule('inspections')} />;
+          case 'Approvals':
+            return <CorrectionsTable onDrawerOpen={handleDrawerOpen} corrections={corrections} canApprove={permissions.canApprove.includes('corrections')} />;
+          case 'Reports':
+            return canViewPage('Reports') ? <ReportsView /> : null;
+          case 'Knowledge Center':
+            return <KnowledgeCenter />;
+          default:
+            return <div className="empty-state"><p>Page not found</p></div>;
+        }
+      };
+
+      return (
+        <div className="app-wrapper">
+          <Sidebar role={role} onRoleChange={setRole} currentPage={currentPage} onPageChange={setCurrentPage} userContext={userContext} />
+          <div className="main-content">
+            <TopBar role={role} currentPage={currentPage} monthSealed={false} />
+            <div className="content-area">
+              {renderContent()}
+            </div>
+          </div>
+
+          {drawerType === 'reading' && (
+            <ReadingDrawer
+              isOpen={drawerOpen}
+              onClose={handleDrawerClose}
+              data={drawerData}
+              onSave={handleSaveReading}
+              allReadings={readings}
+            />
+          )}
+          {drawerType === 'sla' && (
+            <SLADrawer
+              isOpen={drawerOpen}
+              onClose={handleDrawerClose}
+              data={drawerData}
+              onSave={handleSaveSLA}
+            />
+          )}
+          {drawerType === 'interruption' && (
+            <InterruptionDrawer
+              isOpen={drawerOpen}
+              onClose={handleDrawerClose}
+              data={drawerData}
+              onSave={handleSaveInterruption}
+            />
+          )}
+          {drawerType === 'inspection' && (
+            <InspectionDrawer
+              isOpen={drawerOpen}
+              onClose={handleDrawerClose}
+              data={drawerData}
+              onSave={handleSaveInspection}
+            />
+          )}
+          {drawerType === 'approval' && (
+            <ApprovalDrawer
+              isOpen={drawerOpen}
+              onClose={handleDrawerClose}
+              data={drawerData}
+              onApprove={handleApproveCorrection}
+              onReject={handleRejectCorrection}
+            />
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
