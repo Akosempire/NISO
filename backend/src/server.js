@@ -8,6 +8,7 @@ const logger = require('./utils/logger');
 const { connectDB, getDbStatus } = require('./db/connect');
 const { requireDb } = require('./middleware/requireDb');
 const { auditLog } = require('./middleware/audit');
+const { demoApi, isDemoFallbackEnabled } = require('./demo-api');
 
 dotenv.config();
 
@@ -43,6 +44,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Request logging
 app.use((req, res, next) => {
+  if (isDemoFallbackEnabled()) {
+    res.setHeader('X-NISO-DB-Mode', 'demo-fallback');
+  }
   logger.info(`${req.method} ${req.path}`);
   next();
 });
@@ -74,6 +78,7 @@ app.get('/ready', (req, res) => {
 // Every data-backed route requires MongoDB. Without this gate, requests hit
 // Mongoose with bufferCommands disabled and return opaque errors. With it,
 // the client gets a clean 503 + code so the toast UI can degrade gracefully.
+app.use('/api', demoApi);
 app.use('/api', requireDb);
 
 app.use('/api/auth',          require('./routes/auth'));
