@@ -5,6 +5,7 @@ import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BrandLogo } from './brand-logo';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -54,7 +55,7 @@ export function MainLayout({ children, user }: MainLayoutProps) {
               <Menu className="w-6 h-6" />
             )}
           </Button>
-          <span className="text-sm font-medium text-gray-900">NISO</span>
+          <BrandLogo className="h-6 w-auto" variant="wordmark" />
         </div>
 
         {/* Header */}

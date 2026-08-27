@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useState } from 'react';
+import { BrandLogo } from './brand-logo';
 
 interface SidebarProps {
   user?: { role: string };
@@ -99,8 +100,10 @@ export function Sidebar({ user }: SidebarProps) {
       >
         {/* Logo */}
         <div className="p-6 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-indigo-600">NISO</h1>
-          <p className="text-xs text-gray-500">Power System Monitoring</p>
+          <BrandLogo className="h-10 w-auto" variant="wordmark" />
+          <p className="mt-2 text-xs uppercase tracking-[0.24em] text-gray-500">
+            Power System Monitoring
+          </p>
         </div>
 
         {/* Navigation */}
