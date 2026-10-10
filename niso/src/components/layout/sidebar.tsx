@@ -3,16 +3,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
-  TrendingUp,
-  Zap,
-  CheckSquare,
-  BookOpen,
   BarChart3,
-  Settings,
+  BookOpen,
+  CheckSquare,
+  LayoutDashboard,
   LogOut,
   Menu,
+  Settings,
+  TrendingUp,
   X,
+  Zap,
 } from 'lucide-react';
 import { useState } from 'react';
 import { BrandLogo } from './brand-logo';
@@ -63,7 +63,7 @@ export function Sidebar({ user }: SidebarProps) {
       roles: ['SUPERVISOR', 'STATION_ADMIN', 'REGIONAL_ADMIN', 'HEADQUARTERS_ADMIN'],
     },
     {
-      label: 'Knowledge Base',
+      label: 'Knowledge Center',
       href: '/knowledge',
       icon: BookOpen,
       roles: ['OPERATOR', 'SUPERVISOR', 'STATION_ADMIN', 'REGIONAL_ADMIN', 'KNOWLEDGE_ADMIN', 'VIEWER'],
@@ -80,34 +80,30 @@ export function Sidebar({ user }: SidebarProps) {
     user?.role ? item.roles.includes(user.role) : true
   );
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>
-      {/* Mobile menu button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-indigo-600 text-white rounded-lg"
+        className="fixed left-4 top-4 z-50 rounded-md bg-[var(--brand-teal)] p-2 text-white md:hidden"
       >
-        {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
 
-      {/* Sidebar */}
       <aside
-        className={`w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ${
+        className={`fixed z-40 flex h-full w-[248px] flex-col border-r border-[var(--border)] bg-[var(--surface)] transition-transform duration-300 md:static ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        } fixed md:static h-full z-40`}
+        }`}
       >
-        {/* Logo */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="border-b border-[var(--border)] p-5">
           <BrandLogo className="h-10 w-auto" variant="wordmark" />
-          <p className="mt-2 text-xs uppercase tracking-[0.24em] text-gray-500">
+          <p className="mt-2 text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
             Power System Monitoring
           </p>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
           {filteredItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -116,35 +112,33 @@ export function Sidebar({ user }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
                   active
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-[var(--brand-mint-soft)] text-[var(--brand-teal)]'
+                    : 'text-[var(--text-primary)] hover:bg-[var(--surface-muted)]'
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-sm font-medium">{item.label}</span>
+                <Icon className="h-5 w-5" />
+                <span className="font-medium">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-            <LogOut className="w-5 h-5" />
+        <div className="space-y-2 border-t border-[var(--border)] p-4">
+          <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-muted)]">
+            <LogOut className="h-5 w-5" />
             <span className="text-sm font-medium">Sign Out</span>
           </button>
         </div>
       </aside>
 
-      {/* Mobile overlay */}
-      {isOpen && (
+      {isOpen ? (
         <div
-          className="fixed inset-0 bg-black/50 md:hidden z-30"
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
           onClick={() => setIsOpen(false)}
         />
-      )}
+      ) : null}
     </>
   );
 }

@@ -1,48 +1,76 @@
 'use client';
 
-import { AlertTriangle, CheckCircle, Clock, MapPin, Zap } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ArrowUpRight, CheckCircle2, Clock3, TriangleAlert } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
+import type { InterruptionRecord, LoadImpact } from './types';
 
-interface Interruption {
+interface InterruptionListItem {
   id: string;
-  sessionId: string;
-  tripTime: Date;
-  cause: string;
-  remarks?: string;
-  duration: number;
-  equipmentCount: number;
-  records: Array<{
-    id: string;
-    equipment: {
-      id: string;
-      name: string;
-      code: string;
-      station: { name: string };
-    };
-    status: string;
-    relayFault?: string;
-  }>;
+  stationName: string;
+  eventId: string;
+  record: InterruptionRecord;
 }
 
 interface ActiveInterruptionsProps {
-  interruptions: Interruption[];
+  interruptions: InterruptionListItem[];
+  onOpen: (recordId: string) => void;
   onRestore: (recordId: string) => void;
 }
 
-export function ActiveInterruptions({ interruptions, onRestore }: ActiveInterruptionsProps) {
+function formatDuration(ms: number, isActive: boolean) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const prefix = isActive ? 'ACTIVE - ' : '';
+
+  if (days > 0) {
+    return `${prefix}${days}d ${hours.toString().padStart(2, '0')}:${minutes
+      .toString()
+      .padStart(2, '0')}`;
+  }
+
+  return `${prefix}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+function describeLoadImpact(record: InterruptionRecord) {
+  const labels: Record<LoadImpact, string> = {
+    LOAD_LOST: record.loadLostMw ? `Load lost ${record.loadLostMw} MW` : 'Load lost',
+    LOAD_DIVERTED:
+      record.divertedLoadMw && record.divertedTo
+        ? `Diverted ${record.divertedLoadMw} MW to ${record.divertedTo}`
+        : 'Load diverted',
+    PARTIALLY_DIVERTED:
+      record.divertedLoadMw && record.divertedTo
+        ? `Partial diversion ${record.divertedLoadMw} MW to ${record.divertedTo}`
+        : 'Partially diverted',
+    NO_LOAD_IMPACT: 'No load impact',
+    OTHER: 'Other operational impact',
+  };
+
+  return labels[record.loadImpact];
+}
+
+export function ActiveInterruptions({
+  interruptions,
+  onOpen,
+  onRestore,
+}: ActiveInterruptionsProps) {
   const [elapsedTime, setElapsedTime] = useState<Record<string, number>>({});
 
-  // Update elapsed time every second
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedTime(prev => {
+      setElapsedTime((prev) => {
         const updated = { ...prev };
-        interruptions.forEach(interruption => {
-          const tripTime = new Date(interruption.tripTime).getTime();
-          const now = Date.now();
-          updated[interruption.id] = Math.floor((now - tripTime) / 1000);
+        interruptions.forEach((interruption) => {
+          const tripTime = new Date(interruption.record.tripDateTime).getTime();
+          const endTime =
+            interruption.record.status === 'RESTORED' && interruption.record.restorationDateTime
+              ? new Date(interruption.record.restorationDateTime).getTime()
+              : Date.now();
+          updated[interruption.id] = endTime - tripTime;
         });
         return updated;
       });
@@ -51,118 +79,109 @@ export function ActiveInterruptions({ interruptions, onRestore }: ActiveInterrup
     return () => clearInterval(interval);
   }, [interruptions]);
 
-  const formatDuration = (seconds: number) => {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-
-    if (days > 0) {
-      return `ACTIVE • ${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    }
-    return `ACTIVE • ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  };
-
   return (
-    <div className="space-y-4">
+    <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+      <div className="hidden grid-cols-[1.4fr_1fr_1.2fr_1.1fr_1fr_auto] gap-4 border-b border-[var(--border)] bg-[var(--surface-muted)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] md:grid">
+        <span>Equipment</span>
+        <span>Relay Indication</span>
+        <span>Trip Time</span>
+        <span>Load Impact</span>
+        <span>Total Time Out</span>
+        <span>Status</span>
+      </div>
+
       {interruptions.map((interruption) => (
-        <div key={interruption.id} className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <div className="relative">
-                  <AlertTriangle className="w-8 h-8 text-red-500" />
-                  <Zap className="absolute w-3 h-3 text-orange-500 -bottom-1 -right-1 bg-white rounded-full p-0.5" />
-                </div>
+        <div
+          key={interruption.id}
+          className="border-b border-[var(--border)] px-5 py-4 last:border-b-0"
+        >
+          <div className="grid gap-4 md:grid-cols-[1.4fr_1fr_1.2fr_1.1fr_1fr_auto] md:items-center">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-md bg-[color:rgba(199,68,68,0.10)] p-2 text-[var(--danger)]">
+                <TriangleAlert className="h-4 w-4" />
               </div>
-
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    System Interruption
-                  </h3>
-                  <div className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium flex items-center gap-1">
-                    <Clock className="w-4 h-4 animate-pulse" />
-                    {formatDuration(elapsedTime[interruption.id] || interruption.duration)}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Trip Time</p>
-                    <p className="font-medium text-gray-900">{new Date(interruption.tripTime).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Current Duration</p>
-                    <p className="font-medium text-red-600">
-                      {Math.floor((elapsedTime[interruption.id] || interruption.duration) / 3600)}h {Math.floor(((elapsedTime[interruption.id] || interruption.duration) % 3600) / 60)}m
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Cause</p>
-                    <p className="font-medium text-gray-900">{interruption.cause}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Equipment Affected</p>
-                    <p className="font-medium text-gray-900">{interruption.equipmentCount} units</p>
-                  </div>
-                </div>
-
-                {interruption.remarks && (
-                  <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Remarks</p>
-                    <p className="text-sm text-gray-900">{interruption.remarks}</p>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Affected Equipment:
-                  </h4>
-                  {interruption.records.map((record) => (
-                    <div key={record.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-red-50 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${record.status === 'ACTIVE' ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
-                        <div>
-                          <p className="font-medium text-gray-900">{record.equipment.name}</p>
-                          <p className="text-sm text-gray-600">
-                            {record.equipment.code} • {record.equipment.station.name}
-                          </p>
-                          {record.relayFault && (
-                            <p className="text-xs text-red-600 font-medium mt-1">⚠ Fault: {record.relayFault}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={record.status} />
-                        {record.status === 'ACTIVE' && (
-                          <Button
-                            onClick={() => onRestore(record.id)}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Restore
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onOpen(interruption.record.id)}
+                  className="text-left text-sm font-semibold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-teal)]"
+                >
+                  {interruption.record.equipment.name}
+                </button>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  {interruption.record.equipment.type}
+                  {interruption.record.equipment.voltageLevel
+                    ? ` | ${interruption.record.equipment.voltageLevel}`
+                    : ''}
+                </p>
+                <p className="text-xs text-[var(--text-secondary)]">{interruption.stationName}</p>
               </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">
+                {interruption.record.relayIndication}
+              </p>
+              <p className="text-xs text-[var(--text-secondary)]">Event {interruption.eventId}</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-[var(--text-primary)]">
+                {new Intl.DateTimeFormat('en-NG', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }).format(new Date(interruption.record.tripDateTime))}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-[var(--text-primary)]">{describeLoadImpact(interruption.record)}</p>
+              {interruption.record.remarks ? (
+                <p className="mt-1 line-clamp-1 text-xs text-[var(--text-secondary)]">
+                  {interruption.record.remarks}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+              <Clock3 className="h-4 w-4 text-[var(--text-secondary)]" />
+              {formatDuration(
+                elapsedTime[interruption.id] ??
+                  Date.now() - new Date(interruption.record.tripDateTime).getTime(),
+                interruption.record.status === 'ACTIVE'
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
+              <StatusBadge status={interruption.record.status} />
+              <Button variant="outline" size="sm" onClick={() => onOpen(interruption.record.id)}>
+                <ArrowUpRight className="mr-1 h-4 w-4" />
+                Open
+              </Button>
+              {interruption.record.status === 'ACTIVE' ? (
+                <Button size="sm" onClick={() => onRestore(interruption.record.id)}>
+                  Restore
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
       ))}
 
-      {interruptions.length === 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">All Systems Normal</h3>
-          <p className="text-gray-600">No active interruptions at this time.</p>
+      {interruptions.length === 0 ? (
+        <div className="px-6 py-12 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[color:rgba(62,139,104,0.12)] text-[var(--success)]">
+            <CheckCircle2 className="h-6 w-6" />
+          </div>
+          <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">All systems normal</h3>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            No active or recent interruptions are available in the current scope.
+          </p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
